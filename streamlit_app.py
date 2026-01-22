@@ -16,6 +16,16 @@ except FileNotFoundError as e:
     st.stop()
 
 # =============================
+# GBP formatter (Python side)
+# =============================
+def gbp(x):
+    if pd.isna(x):
+        return ""
+    x = float(x)
+    sign = "-" if x < 0 else ""
+    return f"{sign}£{abs(x):,.2f}"
+
+# =============================
 # Top filter by name
 # =============================
 names = ["(All)"] + sorted(icb_df["name"].dropna().unique().tolist())
@@ -31,16 +41,6 @@ else:
 # =============================
 total_difference = pd.to_numeric(filtered_icb["price_difference"], errors="coerce").fillna(0).sum()
 st.metric(label="Total Price Difference", value=gbp(total_difference))
-
-# =============================
-# GBP formatter (Python side)
-# =============================
-def gbp(x):
-    if pd.isna(x):
-        return ""
-    x = float(x)
-    sign = "-" if x < 0 else ""
-    return f"{sign}£{abs(x):,.2f}"
 
 # =============================
 # Master aggregation with details
