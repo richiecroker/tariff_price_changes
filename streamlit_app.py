@@ -24,7 +24,7 @@ def gbp2f(x):
         return ""
     x = float(x)
     sign = "-" if x < 0 else ""
-    return f"{sign}£{abs(x):,.0f}"
+    return f"{sign}£{abs(x):,.2f}"
 
 # Top filter by ICB
 
