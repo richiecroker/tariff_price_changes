@@ -193,13 +193,3 @@ if len(selected) > 0:
                 hide_index=True,
                 use_container_width=True
             )
-
-st.dataframe(
-    display_df.style.format({
-        "Price": gbp,
-        "Previous Price": gbp
-    }),
-    hide_index=True,
-    use_container_width=True
-)
-            
