@@ -22,21 +22,34 @@ else:
 @st.cache_data
 def compute_master(df: pd.DataFrame):
     df = df.copy()
-    df["price_difference"] = pd.to_numeric(df["price_difference"], errors="coerce").fillna(0)
+    df["price_difference"] = pd.to_numeric(
+        df["price_difference"], errors="coerce"
+    ).fillna(0)
 
-    return (
+    master = (
         df.groupby(["bnf_name", "bnf_code"], as_index=False)
           .agg(price_difference_sum=("price_difference", "sum"))
-          .sort_values("price_difference_sum", ascending=False)
+          .sort_values("price_difference_sum", ascending=True)  # ASC
           .reset_index(drop=True)
-          [["bnf_name", "price_difference_sum"]]  # ONLY show bnf_name
     )
+
+    # rename + select only what we show
+    master = master.rename(columns={
+        "bnf_name": "BNF name",
+        "price_difference_sum": "Price difference"
+    })[["BNF name", "Price difference"]]
+
+    return master
 
 master_df = compute_master(filtered_df)
 
 # --- display ---
 st.subheader("Price difference by BNF")
+
 st.dataframe(
-    master_df,
-    use_container_width=True
+    master_df.style.format({
+        "Price difference": "£{:,.2f}"
+    }),
+    use_container_width=True,
+    hide_index=True
 )
