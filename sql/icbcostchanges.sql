@@ -23,6 +23,26 @@ WITH price_changes AS (
   ORDER BY vmpp, tariff_category
 ),
 
+tariff_map AS (
+  SELECT 
+    SAFE_CAST(category AS INT64) AS category, 
+    discount 
+  FROM UNNEST([
+    STRUCT('1' AS category, 0.2 AS discount),
+    STRUCT('3' AS category, 0.05 AS discount),
+    STRUCT('5' AS category, 0.0985 AS discount),
+    STRUCT('6' AS category, 0.0985 AS discount),
+    STRUCT('7' AS category, 0.0985 AS discount),
+    STRUCT('8' AS category, 0.0985 AS discount),
+    STRUCT('9' AS category, 0.05 AS discount),
+    STRUCT('10' AS category, 0.0985 AS discount),
+    STRUCT('11' AS category, 0.2 AS discount),
+    STRUCT('12' AS category, 0.05 AS discount),
+    STRUCT('13' AS category, 0.05 AS discount),
+    STRUCT('14' AS category, 0.05 AS discount)
+  ])
+),
+
 agg_price_changes AS (
   SELECT
     pc.date,
@@ -33,17 +53,25 @@ agg_price_changes AS (
     pc.prev_tariff_category,
     pc.previous_price_pence,
     vf.nm,
-    (pc.price_pence - pc.previous_price_pence) / (vf.qtyval * 100) AS price_diff_pu
+    ((1 - COALESCE(tf.discount, 0.05)) * pc.price_pence) - 
+    ((1 - COALESCE(ptf.discount, 0.05)) * pc.previous_price_pence)) / 
+    (vf.qtyval * 100) AS price_diff_pu
   FROM price_changes pc
   INNER JOIN dmd.vmpp_full vf
     ON vf.id = pc.vmpp
+  INNER JOIN tariff_map tf
+    ON pc.tariff_category = tf.category
+  INNER JOIN tariff_map ptf
+    ON pc.prev_tariff_category = ptf.category
 ),
 
 bnf_code_price_changes AS (
   SELECT
     *,
-    CASE WHEN ROW_NUMBER() OVER (PARTITION BY bnf_code ORDER BY price_diff_pu DESC) = 1
-      THEN 1 ELSE 0
+    CASE 
+      WHEN ROW_NUMBER() OVER (PARTITION BY bnf_code ORDER BY price_diff_pu DESC) = 1
+      THEN 1 
+      ELSE 0
     END AS is_max_price_diff_pu
   FROM agg_price_changes
 )
@@ -53,12 +81,12 @@ SELECT
   rx.bnf_name,
   rx.bnf_code,
   SUM(quantity * bnf.price_diff_pu * is_max_price_diff_pu) AS price_difference
-FROM hscic.normalised_prescribing AS rx
-INNER JOIN hscic.ccgs AS ccgs
+FROM hscic.normalised_prescribing rx
+INNER JOIN hscic.ccgs ccgs
   ON rx.pct = ccgs.code
-INNER JOIN hscic.stps AS icb
+INNER JOIN hscic.stps icb
   ON ccgs.stp_id = icb.code
-INNER JOIN bnf_code_price_changes AS bnf
+INNER JOIN bnf_code_price_changes bnf
   ON bnf.bnf_code = rx.bnf_code
 WHERE month = (SELECT MAX(month) FROM hscic.normalised_prescribing)
   AND ccgs.org_type = 'CCG'
