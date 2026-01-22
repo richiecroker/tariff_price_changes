@@ -12,6 +12,10 @@ icb_data, vmpp_data = data_loader.get_fresh_data_if_needed()
 icb_df = pd.DataFrame(icb_data)
 vmpp_df = pd.DataFrame(vmpp_data)
 
+# Get latest dates
+max_rx_date = data_loader.get_cached_max_rxdate()
+max_tariff_date = data_loader.get_cached_max_tariffdate()
+
 # GBP formatter (Python side)
 
 def gbp(x):
@@ -31,6 +35,8 @@ def gbp2f(x):
 # Top filter by ICB
 
 st.header("Drug Tariff price change estimator", divider ="blue")
+
+st.markdown(f"### Drug Tariff month: "){max_tariff_date}")
 
 names = ["(All)"] + sorted(icb_df["name"].dropna().unique().tolist())
 st.markdown("### Select Integrated Care Board")
