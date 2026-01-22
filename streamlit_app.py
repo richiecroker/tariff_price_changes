@@ -5,19 +5,13 @@ from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
 # Set wide layout
 st.set_page_config(layout="wide")
 
-# =============================
-# Load CSVs with error handling
-# =============================
-try:
-    icb_df = pd.read_csv("icbpricechanges.csv")
-    vmpp_df = pd.read_csv("vmpppricechanges.csv")
-except FileNotFoundError as e:
-    st.error(f"CSV file not found: {e}")
-    st.stop()
+# Load CSVs (to be replaced with SQL)
 
-# =============================
+icb_df = pd.read_csv("icbpricechanges.csv")
+vmpp_df = pd.read_csv("vmpppricechanges.csv")
+
 # GBP formatter (Python side)
-# =============================
+
 def gbp(x):
     if pd.isna(x):
         return ""
@@ -25,24 +19,21 @@ def gbp(x):
     sign = "-" if x < 0 else ""
     return f"{sign}£{abs(x):,.2f}"
 
-# =============================
-# Top filter by name
-# =============================
+# Top filter by ICB
+
 names = ["(All)"] + sorted(icb_df["name"].dropna().unique().tolist())
-selected_name = st.selectbox("Integrated Care Board", names)
+selected_name = st.selectbox("SelectIntegrated Care Board", names)
 
 if selected_name != "(All)":
     filtered_icb = icb_df[icb_df["name"] == selected_name].copy()
 else:
     filtered_icb = icb_df.copy()
 
-# =============================
-# Calculate and display total difference
-# =============================
+# Calculate and display total price change
 total_difference = pd.to_numeric(filtered_icb["price_difference"], errors="coerce").fillna(0).sum()
 st.metric(label="Total Price Difference", value=gbp(total_difference))
 
-# =============================
+# =======.======================
 # Master aggregation with details
 # =============================
 @st.cache_data
@@ -86,31 +77,8 @@ def compute_master_with_details(icb_df: pd.DataFrame, vmpp_df: pd.DataFrame):
 
 master_df = compute_master_with_details(filtered_icb, vmpp_df)
 
-# =============================
-# CSS for drill button and details
-# =============================
-st.markdown(
-    """
-    <style>
-      .ag-theme-streamlit .drill-btn {
-        background: transparent;
-        border: none;
-        cursor: pointer;
-        font-size: 14px;
-        padding: 4px 6px;
-      }
-      .ag-theme-streamlit .drill-btn:hover {
-        background: rgba(0,0,0,0.05);
-        border-radius: 4px;
-      }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
-# =============================
 # Price formatter for AgGrid
-# =============================
+
 price_formatter = JsCode("""
 function(params) {
     if (params.value == null || params.value === undefined) return '';
@@ -125,10 +93,9 @@ function(params) {
 }
 """)
 
-# =============================
 # Build Master Grid with master-detail
 # =============================
-st.subheader("Master (aggregated by BNF)")
+st.subheader("Estimated cost difference per presentation")
 
 # Add download button for full dataset
 csv_data = master_df[master_df["is_detail"] == False][["bnf_name", "bnf_code", "price_difference_sum"]].to_csv(index=False)
@@ -144,7 +111,7 @@ gb = GridOptionsBuilder.from_dataframe(master_df)
 gb.configure_column("bnf_name", header_name="BNF name", sortable=True, flex=2)
 gb.configure_column(
     "price_difference_sum",
-    header_name="Price difference",
+    header_name="Est cost difference",
     sortable=True,
     type=["numericColumn"],
     valueFormatter=price_formatter,
@@ -189,9 +156,8 @@ grid_response = AgGrid(
     theme='streamlit'
 )
 
-# =============================
 # Show details below when selected
-# =============================
+
 selected = grid_response.get("selected_rows")
 
 if selected is None:
@@ -214,7 +180,7 @@ if len(selected) > 0:
             details_df["price"] = pd.to_numeric(details_df["price_pence"], errors="coerce") / 100
             details_df["previous_price"] = pd.to_numeric(details_df["previous_price_pence"], errors="coerce") / 100
             
-            st.subheader("VMPP rows")
+            st.subheader(f"Drug Tariff details for {bnf_name}")
             st.dataframe(
                 details_df[["nm", "price", "previous_price"]].style.format({
                     "price": gbp,
