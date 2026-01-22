@@ -30,12 +30,6 @@ def run_query(query):
     rows = query_job.result()
     return [dict(row) for row in rows]
 
-# Uncached version for checking current state
-def run_query_uncached(query):
-    query_job = client.query(query)
-    rows = query_job.result()
-    return [dict(row) for row in rows]
-
 # Cache the latest known max dates from last fetch
 @st.cache_data
 def get_cached_max_rxdate():
@@ -53,14 +47,17 @@ def get_fresh_data_if_needed():
     cached_max_rx = get_cached_max_rxdate()
     cached_max_tariff = get_cached_max_tariffdate()
     
-    # Get current max dates directly from DB (NOT CACHED)
-    current_max_rx = run_query_uncached(maxrxdate_sql)[0]["max_month"]
-    current_max_tariff = run_query_uncached(maxtariffdate_sql)[0]["max_month"]
+    # Get current max dates directly from DB (not cached)
+    current_max_rx = run_query(maxrxdate_sql)[0]["max_month"]
+    current_max_tariff = run_query(maxtariffdate_sql)[0]["max_month"]
     
     # Check if either date has changed
     if current_max_rx != cached_max_rx or current_max_tariff != cached_max_tariff:
         st.cache_data.clear()  # Invalidate all cached data
-        st.rerun()  # Force immediate rerun with fresh cache
+        
+        # Update cached max dates
+        get_cached_max_rxdate()
+        get_cached_max_tariffdate()
     
     # Fetch data (will use cache if available, fresh if we just cleared)
     icb_data = run_query(icbcostchanges_sql)
