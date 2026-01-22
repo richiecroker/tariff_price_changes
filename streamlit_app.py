@@ -8,7 +8,7 @@ df = pd.read_csv("pricechangedemo.csv")
 
 # --- TOP FILTER ---
 names = ["(All)"] + sorted(df["name"].dropna().unique().tolist())
-selected_name = st.selectbox("Filter by name", names)
+selected_name = st.selectbox("Intergrated Care Board", names)
 
 if selected_name != "(All)":
     df = df[df["name"] == selected_name]
