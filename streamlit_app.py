@@ -21,6 +21,8 @@ def gbp(x):
 
 # Top filter by ICB
 
+st.header("Drug Tariff price change estimator", divider ="blue")
+
 names = ["(All)"] + sorted(icb_df["name"].dropna().unique().tolist())
 st.markdown("### Select Integrated Care Board")
 selected_name = st.selectbox("Select Integrated Care Board", names, label_visibility="collapsed")
