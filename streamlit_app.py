@@ -46,14 +46,14 @@ df.loc[df["price"] < df["prev_price"], "price_change"] = "decrease"
 
 # Group by category + change
 summary = (
-    df.groupby(["category", "price_change"])
+    df.groupby(["tariff_category", "price_change"])
       .size()
       .unstack(fill_value=0)
       .reset_index()
 )
 
 for _, row in summary.iterrows():
-    st.markdown(f"### Category {row['category']}")
+    st.markdown(f"### Category {row['tariff_category']}")
     c1, c2, c3 = st.columns(3)
     c1.metric("Increases", row.get("increase", 0))
     c2.metric("Decreases", row.get("decrease", 0))
