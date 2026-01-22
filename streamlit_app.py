@@ -142,7 +142,18 @@ function(params) {
 st.subheader("Estimated cost difference per presentation", divider="blue")
 st.markdown("Click on product to see tariff details")
 
-gb = GridOptionsBuilder.from_dataframe(master_df)
+# Add search box for BNF name
+search_term = st.text_input("Search BNF name", placeholder="Type to search...")
+
+# Filter master_df based on search
+if search_term:
+    display_master_df = master_df[
+        master_df["bnf_name"].str.contains(search_term, case=False, na=False)
+    ].copy()
+else:
+    display_master_df = master_df.copy()
+
+gb = GridOptionsBuilder.from_dataframe(display_master_df)
 
 gb.configure_column("bnf_name", header_name="BNF name", sortable=True, flex=2)
 gb.configure_column(
@@ -183,7 +194,7 @@ gb.configure_selection("single", use_checkbox=False)
 grid_opts = gb.build()
 
 grid_response = AgGrid(
-    master_df,
+    display_master_df,
     gridOptions=grid_opts,
     update_mode=GridUpdateMode.SELECTION_CHANGED,
     allow_unsafe_jscode=True,
