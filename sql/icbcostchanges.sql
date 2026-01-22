@@ -53,9 +53,8 @@ agg_price_changes AS (
     pc.prev_tariff_category,
     pc.previous_price_pence,
     vf.nm,
-    ((1 - COALESCE(tf.discount, 0.05)) * pc.price_pence) - 
-    ((1 - COALESCE(ptf.discount, 0.05)) * pc.previous_price_pence)) / 
-    (vf.qtyval * 100) AS price_diff_pu
+    (((1 - COALESCE(tf.discount, 0.05)) * pc.price_pence) - 
+    ((1 - COALESCE(ptf.discount, 0.05)) * pc.previous_price_pence)) /  (vf.qtyval * 100) AS price_diff_pu
   FROM price_changes pc
   INNER JOIN dmd.vmpp_full vf
     ON vf.id = pc.vmpp
