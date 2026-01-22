@@ -38,6 +38,14 @@ from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
 st.set_page_config(layout="wide")
 st.title("BNF → Pack drilldown (memory-friendly)")
 
+import streamlit as st
+import pandas as pd
+import numpy as np
+from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
+
+st.set_page_config(layout="wide")
+st.title("BNF → Pack drilldown (memory-friendly)")
+
 @st.cache_data
 def load_and_prepare_tree(path="pricechangedemo.csv", nrows=None, max_parents=50):
     """Load data and build tree structure with limited rows"""
@@ -72,20 +80,24 @@ def load_and_prepare_tree(path="pricechangedemo.csv", nrows=None, max_parents=50
     # Filter parent data to top only
     parent_subset = parent_agg[parent_agg["bnf_name"].isin(top_parents)].copy()
     
-    # Build parent rows
-    parent_df = pd.DataFrame({
-        "orgHierarchy": parent_subset["bnf_name"].tolist(),
-        "price_difference": parent_subset["price_difference"].tolist()
-    })
+    # Build parent rows - just the BNF name
+    parent_rows = []
+    for bnf, price in zip(parent_subset["bnf_name"], parent_subset["price_difference"]):
+        parent_rows.append({
+            "orgHierarchy": [bnf],  # List with one element
+            "price_difference": price
+        })
     
-    # Build child rows with hierarchy path
-    child_df = pd.DataFrame({
-        "orgHierarchy": [f"{bnf}|{pack}" for bnf, pack in zip(pack_list["bnf_name"], pack_list["nm"])],
-        "price_difference": [np.nan] * len(pack_list)
-    })
+    # Build child rows - list with [BNF, Pack]
+    child_rows = []
+    for bnf, pack in zip(pack_list["bnf_name"], pack_list["nm"]):
+        child_rows.append({
+            "orgHierarchy": [bnf, pack],  # List with two elements
+            "price_difference": np.nan
+        })
     
     # Combine
-    tree_df = pd.concat([parent_df, child_df], ignore_index=True)
+    tree_df = pd.DataFrame(parent_rows + child_rows)
     
     return tree_df
 
@@ -107,22 +119,18 @@ st.write(f"Displaying {len(tree_df):,} total rows")
 with st.expander("Debug: View sample data"):
     st.dataframe(tree_df.head(10))
 
-# Add a simple name column extracted from hierarchy
-tree_df["name"] = tree_df["orgHierarchy"].apply(lambda x: x.split('|')[-1])
-
-# JavaScript function to parse the hierarchy
+# JavaScript function to get the path - it's already a list!
 getDataPath = JsCode("""
 function(data) {
-    return data.orgHierarchy.split('|');
+    return data.orgHierarchy;
 }
 """)
 
 # Configure AgGrid
 gb = GridOptionsBuilder.from_dataframe(tree_df)
 
-# Hide the orgHierarchy column but show name
+# Hide the orgHierarchy column
 gb.configure_column("orgHierarchy", hide=True)
-gb.configure_column("name", hide=True)  # Will be shown via autoGroupColumnDef
 
 # Configure price difference
 gb.configure_column(
@@ -153,7 +161,6 @@ gb.configure_grid_options(
     autoGroupColumnDef={
         "headerName": "BNF / Pack",
         "minWidth": 400,
-        "field": "name",
         "cellRendererParams": {"suppressCount": True}
     },
     groupDefaultExpanded=-1,  # Start collapsed
