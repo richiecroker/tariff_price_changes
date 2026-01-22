@@ -17,4 +17,8 @@ selected_name = st.selectbox("Intergrated Care Board", names)
 if selected_name != "(All)":
     df = df[df["name"] == selected_name]
 
+valueGetter: function(params) {
+    return params.data.price_pence /100;  // Add 10% tax to the original price
+}
+
 grid_return = AgGrid(df)
