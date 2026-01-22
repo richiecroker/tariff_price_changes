@@ -87,6 +87,40 @@ def compute_master_with_details(icb_df: pd.DataFrame, vmpp_df: pd.DataFrame):
 
 master_df = compute_master_with_details(filtered_icb, vmpp_df)
 
+# =============================
+# Top 10 Reductions and Increases
+# =============================
+# Get only the master rows (not detail rows)
+master_only = master_df[master_df["is_detail"] == False].copy()
+
+# Top 10 reductions (most negative values)
+top_reductions = master_only.nsmallest(10, "price_difference_sum")[["bnf_name", "price_difference_sum"]].copy()
+top_reductions.columns = ["BNF Name", "Price Difference"]
+
+# Top 10 increases (most positive values)
+top_increases = master_only.nlargest(10, "price_difference_sum")[["bnf_name", "price_difference_sum"]].copy()
+top_increases.columns = ["BNF Name", "Price Difference"]
+
+# Display side by side
+col1, col2 = st.columns(2)
+
+with col1:
+    st.subheader("Top 10 Price Reductions")
+    st.dataframe(
+        top_reductions.style.format({"Price Difference": gbp}),
+        hide_index=True,
+        use_container_width=True
+    )
+
+with col2:
+    st.subheader("Top 10 Price Increases")
+    st.dataframe(
+        top_increases.style.format({"Price Difference": gbp}),
+        hide_index=True,
+        use_container_width=True
+    )
+
+
 # Price formatter for AgGrid
 
 price_formatter = JsCode("""
