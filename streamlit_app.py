@@ -83,11 +83,11 @@ summary = (
 )
 
 for _, row in summary.iterrows():
-    st.markdown(f"### Category {row['tariff_category']}")
+    st.markdown(f"**Category: {row['tariff_category']}**")
     c1, c2, c3 = st.columns(3)
-    c1.metric("Increases", row.get("increase", 0))
-    c2.metric("Decreases", row.get("decrease", 0))
-    c3.metric("No change", row.get("unchanged", 0))
+    c1.metric("↑", row.get("increase", 0))
+    c2.metric("↓", row.get("decrease", 0))
+    c3.metric("=", row.get("unchanged", 0))
 
 
 
