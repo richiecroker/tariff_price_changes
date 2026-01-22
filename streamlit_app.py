@@ -22,7 +22,7 @@ max_tariff_date = pd.to_datetime(raw_max_tariff_date, errors="coerce").strftime(
 # calculate number of changes to vmpp
 
 price = pd.to_numeric(vmpp_df["price_pence"], errors="coerce")
-prev = pd.to_numeric(vmpp_df["prev_price_pence"], errors="coerce")
+prev = pd.to_numeric(vmpp_df["previous_price_pence"], errors="coerce")
 
 num_increased = (price > prev).sum()
 num_decreased = (price < prev).sum()
