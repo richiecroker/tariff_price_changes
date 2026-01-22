@@ -20,23 +20,5 @@ if selected_name != "(All)":
 st.subheader("Raw data")
 st.dataframe(df)
 
-# Aggregation controls
-group_col = st.selectbox("Group by", df.columns)
-value_col = st.selectbox("Aggregate column", df.columns)
-
-# Aggregate
-agg = (
-    df.groupby(group_col)[value_col]
-      .mean()
-      .reset_index(name="avg_value")
-)
-
-st.subheader("Aggregation (mean)")
-st.dataframe(agg)
-
-# Drilldown
-selected = st.selectbox("Drill into group", agg[group_col])
-drill_df = df[df[group_col] == selected]
-
-st.subheader(f"Rows for {group_col} = {selected}")
-st.dataframe(drill_df)
+# 1) Parent aggregation: total cost per drug
+parent_agg = df.groupby("bnf_name", as_index=False)["price_difference"].sum()
