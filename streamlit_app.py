@@ -21,6 +21,10 @@ if selected_name != "(All)":
 st.subheader("Raw data")
 st.dataframe(df)
 
+
+st.set_page_config(layout="wide")
+st.title("BNF → Pack drilldown (memory-friendly)")
+
 @st.cache_data
 def load_and_prepare_tree(path="pricechangedemo.csv", nrows=None, max_parents=50):
     """Load data and build tree structure with limited rows"""
@@ -99,8 +103,11 @@ if len(tree_df) == 0:
 # Configure AgGrid with tree data
 gb = GridOptionsBuilder.from_dataframe(tree_df)
 
-# Hide the path column, it will be shown via autoGroupColumnDef
-gb.configure_column("path", hide=True)
+# Configure the path column - don't hide it, let tree renderer use it
+gb.configure_column(
+    "path",
+    headerName="BNF / Pack"
+)
 
 # Configure price difference column
 gb.configure_column(
@@ -129,8 +136,10 @@ gb.configure_grid_options(
     autoGroupColumnDef={
         "headerName": "BNF / Pack", 
         "minWidth": 400,
+        "field": "path",
         "cellRendererParams": {
-            "suppressCount": True
+            "suppressCount": True,
+            "innerRenderer": "function(params) { return params.value[params.value.length - 1]; }"
         }
     },
     groupDefaultExpanded=0,  # Start collapsed
