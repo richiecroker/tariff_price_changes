@@ -34,7 +34,7 @@ else:
 
 # Calculate and display total price change
 total_difference = pd.to_numeric(filtered_icb["price_difference"], errors="coerce").fillna(0).sum()
-st.markdown("### Total Price Difference")
+st.markdown("#### Total estimated monthly price difference")
 st.markdown(f"# {gbp(total_difference)}")
 
 # =======.======================
