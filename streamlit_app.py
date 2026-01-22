@@ -19,6 +19,13 @@ def gbp(x):
     sign = "-" if x < 0 else ""
     return f"{sign}£{abs(x):,.0f}"
 
+def gbp2f(x):
+    if pd.isna(x):
+        return ""
+    x = float(x)
+    sign = "-" if x < 0 else ""
+    return f"{sign}£{abs(x):,.0f}"
+
 # Top filter by ICB
 
 st.header("Drug Tariff price change estimator", divider ="blue")
@@ -182,8 +189,8 @@ if len(selected) > 0:
             
             st.dataframe(
                 display_df.style.format({
-                    "Price": gbp,
-                    "Previous Price": gbp
+                    "Price": gbp2f,
+                    "Previous Price": gbp2f
                 }),
                 hide_index=True,
                 use_container_width=True
