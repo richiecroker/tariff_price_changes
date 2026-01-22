@@ -5,14 +5,15 @@ from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
 st.set_page_config(layout="wide")
 st.title("Price Change Demo")
 
-# Load CSV
-df = pd.read_csv("pricechangedemo.csv")
+# Load CSVs
+icb_df = pd.read_csv("icbpricechanges.csv")
+vmpp_df = pd.read_csv("vmpppricechanges.csv")
 
 # --- TOP FILTER ---
-names = ["(All)"] + sorted(df["name"].dropna().unique().tolist())
+names = ["(All)"] + sorted(icb_df["name"].dropna().unique().tolist())
 selected_name = st.selectbox("Integrated Care Board", names)   # fixed spelling optionally
 
 if selected_name != "(All)":
-    df = df[df["name"] == selected_name]
+    icb_df = icb_df[icb_df["name"] == selected_name]
 
-grid_return = AgGrid(df)
+grid_return = AgGrid(icb_df)
