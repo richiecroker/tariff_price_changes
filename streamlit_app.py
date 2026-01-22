@@ -99,15 +99,6 @@ function(params) {
 # =============================
 st.subheader("Estimated cost difference per presentation")
 
-# Add download button for full dataset
-csv_data = master_df[master_df["is_detail"] == False][["bnf_name", "bnf_code", "price_difference_sum"]].to_csv(index=False)
-st.download_button(
-    "Download full table as CSV",
-    csv_data,
-    file_name=f"bnf_prices_{selected_name.replace(' ', '_')}.csv",
-    mime="text/csv"
-)
-
 gb = GridOptionsBuilder.from_dataframe(master_df)
 
 gb.configure_column("bnf_name", header_name="BNF name", sortable=True, flex=2)
@@ -195,3 +186,12 @@ if len(selected) > 0:
                 hide_index=True,
                 use_container_width=True
             )
+
+# Add download button for full dataset
+csv_data = master_df[master_df["is_detail"] == False][["bnf_name", "bnf_code", "price_difference_sum"]].to_csv(index=False)
+st.download_button(
+    "Download full table as CSV",
+    csv_data,
+    file_name=f"bnf_prices_{selected_name.replace(' ', '_')}.csv",
+    mime="text/csv"
+)
