@@ -182,7 +182,7 @@ if len(selected) > 0:
             
             st.subheader(f"Drug Tariff details for {bnf_name}")
             st.dataframe(
-                details_df[["nm", "price", "previous_price"]].style.format({
+                details_df[["nm", "price", "previous_price", "tariff_category"]].style.format({
                     "price": gbp,
                     "previous_price": gbp
                 }),
