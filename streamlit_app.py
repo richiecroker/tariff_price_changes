@@ -181,12 +181,25 @@ if len(selected) > 0:
             details_df["previous_price"] = pd.to_numeric(details_df["previous_price_pence"], errors="coerce") / 100
             
             st.subheader(f"Drug Tariff details for {bnf_name}")
+            
+            display_df = details_df[["nm", "price", "previous_price", "tariff_category"]].copy()
+            display_df.columns = ["Name", "Price", "Previous Price", "Tariff Category"]
+            
             st.dataframe(
-                details_df[["nm", "price", "previous_price", "tariff_category"]].style.format({
-                    "price": gbp,
-                    "previous_price": gbp
+                display_df.style.format({
+                    "Price": gbp,
+                    "Previous Price": gbp
                 }),
                 hide_index=True,
                 use_container_width=True
             )
+
+st.dataframe(
+    display_df.style.format({
+        "Price": gbp,
+        "Previous Price": gbp
+    }),
+    hide_index=True,
+    use_container_width=True
+)
             
