@@ -52,7 +52,7 @@ st.header("Drug Tariff price change estimator", divider ="blue")
 st.markdown(f"### Drug Tariff month: {max_tariff_date}")
 st.markdown(f"### Prescribing data used for estimate: {max_rx_date}")
 
-st.markdown (f"#### Total changes for {max_rx_date}")
+st.markdown (f"#### Total changes for {max_tariff_date}")
 st.markdown (f"VMPPs with price reduction: {num_decreased}")
 st.markdown (f"VMPPs with price increase: {num_increased}")
 st.markdown (f"VMPPs unchanged: {num_unchanged}")
