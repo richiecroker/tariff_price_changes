@@ -34,7 +34,7 @@ else:
 
 # Calculate and display total price change
 total_difference = pd.to_numeric(filtered_icb["price_difference"], errors="coerce").fillna(0).sum()
-st.markdown(f"#### Total estimated monthly price difference: {gbp(total_difference)}")
+st.markdown(f"### Total estimated monthly price difference: {gbp(total_difference)}")
 
 # =======.======================
 # Master aggregation with details
@@ -99,6 +99,7 @@ function(params) {
 # Build Master Grid with master-detail
 # =============================
 st.subheader("Estimated cost difference per presentation", divider="blue")
+st.markdown("Click on product to see tariff details")
 
 gb = GridOptionsBuilder.from_dataframe(master_df)
 
@@ -174,7 +175,7 @@ if len(selected) > 0:
             details_df["price"] = pd.to_numeric(details_df["price_pence"], errors="coerce") / 100
             details_df["previous_price"] = pd.to_numeric(details_df["previous_price_pence"], errors="coerce") / 100
             
-            st.subheader(f"Drug Tariff details for {bnf_name}")
+            st.subheader(f"Drug Tariff details for {bnf_name}", divider="blue")
             
             display_df = details_df[["nm", "price", "previous_price", "tariff_category"]].copy()
             display_df.columns = ["Name", "Price", "Previous Price", "Tariff Category"]
