@@ -48,8 +48,8 @@ st.subheader("Price difference by BNF")
 
 st.dataframe(
     master_df.style.format({
-        "Price difference": "£{:,.2f}"
+        "Price difference": lambda x: f"{'-' if x < 0 else ''}£{abs(x):,.2f}"
     }),
-    use_container_width=True,
-    hide_index=True
+    hide_index=True,
+    use_container_width=True
 )
