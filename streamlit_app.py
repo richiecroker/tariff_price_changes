@@ -32,7 +32,8 @@ else:
 
 # Calculate and display total price change
 total_difference = pd.to_numeric(filtered_icb["price_difference"], errors="coerce").fillna(0).sum()
-st.metric(label="Total Price Difference", value=gbp(total_difference))
+st.markdown("### Total Price Difference")
+st.markdown(f"# {gbp(total_difference)}")
 
 # =======.======================
 # Master aggregation with details
