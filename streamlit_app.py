@@ -30,6 +30,14 @@ from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
 st.set_page_config(layout="wide")
 st.title("BNF → Pack drilldown (memory-friendly)")
 
+import streamlit as st
+import pandas as pd
+import numpy as np
+from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
+
+st.set_page_config(layout="wide")
+st.title("BNF → Pack drilldown (memory-friendly)")
+
 @st.cache_data
 def load_and_prepare_tree(path="pricechangedemo.csv", nrows=None, max_parents=50):
     """Load data and build tree structure with limited rows"""
@@ -95,6 +103,13 @@ tree_df = load_and_prepare_tree(max_parents=max_parents)
 
 st.write(f"Displaying {len(tree_df):,} total rows")
 
+# Debug: show sample data
+with st.expander("Debug: View sample data"):
+    st.dataframe(tree_df.head(10))
+
+# Add a simple name column extracted from hierarchy
+tree_df["name"] = tree_df["orgHierarchy"].apply(lambda x: x.split('|')[-1])
+
 # JavaScript function to parse the hierarchy
 getDataPath = JsCode("""
 function(data) {
@@ -105,8 +120,9 @@ function(data) {
 # Configure AgGrid
 gb = GridOptionsBuilder.from_dataframe(tree_df)
 
-# Hide the orgHierarchy column
+# Hide the orgHierarchy column but show name
 gb.configure_column("orgHierarchy", hide=True)
+gb.configure_column("name", hide=True)  # Will be shown via autoGroupColumnDef
 
 # Configure price difference
 gb.configure_column(
@@ -137,6 +153,7 @@ gb.configure_grid_options(
     autoGroupColumnDef={
         "headerName": "BNF / Pack",
         "minWidth": 400,
+        "field": "name",
         "cellRendererParams": {"suppressCount": True}
     },
     groupDefaultExpanded=-1,  # Start collapsed
