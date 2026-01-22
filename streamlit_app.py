@@ -22,6 +22,11 @@ st.subheader("Raw data")
 st.dataframe(df)
 
 
+import streamlit as st
+import pandas as pd
+import numpy as np
+from st_aggrid import AgGrid, GridOptionsBuilder
+
 st.set_page_config(layout="wide")
 st.title("BNF → Pack drilldown (memory-friendly)")
 
@@ -60,7 +65,7 @@ def load_and_prepare_tree(path="pricechangedemo.csv", nrows=None, max_parents=50
     parent_subset = parent_agg[parent_agg["bnf_name"].isin(top_parents)].copy()
     
     # Build tree structure efficiently with list operations
-    # Parent rows - create paths as lists of lists
+    # Parent rows - create paths as lists
     parent_paths = [[bnf] for bnf in parent_subset["bnf_name"].tolist()]
     parent_prices = parent_subset["price_difference"].tolist()
     
@@ -69,15 +74,18 @@ def load_and_prepare_tree(path="pricechangedemo.csv", nrows=None, max_parents=50
     child_prices = [np.nan] * len(child_paths)
     
     # Create final tree dataframe
+    all_paths = parent_paths + child_paths
+    all_prices = parent_prices + child_prices
+    
     tree_df = pd.DataFrame({
-        "path": parent_paths + child_paths,
-        "price_difference": parent_prices + child_prices
+        "path": all_paths,
+        "price_difference": all_prices
     })
     
     # Sort by first element of path (BNF name) and depth
-    tree_df["sort_key"] = tree_df["path"].apply(lambda x: x[0])
-    tree_df["depth"] = tree_df["path"].apply(lambda x: len(x))
-    tree_df = tree_df.sort_values(["sort_key", "depth"]).drop(columns=["sort_key", "depth"])
+    tree_df["_sort"] = tree_df["path"].str[0]
+    tree_df["_depth"] = tree_df["path"].str.len()
+    tree_df = tree_df.sort_values(["_sort", "_depth"]).drop(columns=["_sort", "_depth"])
     
     return tree_df.reset_index(drop=True)
 
@@ -103,11 +111,7 @@ if len(tree_df) == 0:
 # Configure AgGrid with tree data
 gb = GridOptionsBuilder.from_dataframe(tree_df)
 
-# Configure the path column - don't hide it, let tree renderer use it
-gb.configure_column(
-    "path",
-    headerName="BNF / Pack"
-)
+# Don't configure the path column separately - let autoGroupColumnDef handle it
 
 # Configure price difference column
 gb.configure_column(
@@ -132,19 +136,16 @@ gb.configure_column(
 # Configure tree data
 gb.configure_grid_options(
     treeData=True,
-    getDataPath="function(data) { return data.path; }",
+    animateRows=False,
+    groupDefaultExpanded=-1,  # -1 means start collapsed, user clicks to expand
     autoGroupColumnDef={
-        "headerName": "BNF / Pack", 
+        "headerName": "BNF / Pack",
         "minWidth": 400,
-        "field": "path",
         "cellRendererParams": {
-            "suppressCount": True,
-            "innerRenderer": "function(params) { return params.value[params.value.length - 1]; }"
+            "suppressCount": True
         }
     },
-    groupDefaultExpanded=0,  # Start collapsed
-    animateRows=False,
-    suppressRowTransform=True,
+    getDataPath="function(data) { var path = data.path; return path; }",
 )
 
 # Add pagination to limit rendered rows
