@@ -22,7 +22,8 @@ def gbp(x):
 # Top filter by ICB
 
 names = ["(All)"] + sorted(icb_df["name"].dropna().unique().tolist())
-selected_name = st.selectbox("SelectIntegrated Care Board", names)
+st.markdown("### Select Integrated Care Board")
+selected_name = st.selectbox("Select Integrated Care Board", names, label_visibility="collapsed")
 
 if selected_name != "(All)":
     filtered_icb = icb_df[icb_df["name"] == selected_name].copy()
