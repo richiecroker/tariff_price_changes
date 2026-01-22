@@ -28,6 +28,36 @@ num_increased = (price > prev).sum()
 num_decreased = (price < prev).sum()
 num_unchanged = (price == prev).sum()
 
+
+
+# GBP formatter (Python side)
+
+def gbp(x):
+    if pd.isna(x):
+        return ""
+    x = float(x)
+    sign = "-" if x < 0 else ""
+    return f"{sign}£{abs(x):,.0f}"
+
+def gbp2f(x):
+    if pd.isna(x):
+        return ""
+    x = float(x)
+    sign = "-" if x < 0 else ""
+    return f"{sign}£{abs(x):,.2f}"
+
+# Top filter by ICB
+
+st.header("Drug Tariff price change estimator", divider ="blue")
+
+st.markdown(f"### Drug Tariff month: {max_tariff_date}")
+st.markdown(f"### Prescribing data used for estimate: {max_rx_date}")
+
+st.markdown (f"#### Total changes for {max_tariff_date}")
+st.markdown (f"VMPPs with price reduction: {num_decreased}")
+st.markdown (f"VMPPs with price increase: {num_increased}")
+st.markdown (f"VMPPs unchanged: {num_unchanged}")
+
 # Coerce prices to numeric
 price = pd.to_numeric(vmpp_df["price_pence"], errors="coerce")
 prev = pd.to_numeric(vmpp_df["previous_price_pence"], errors="coerce")
@@ -59,33 +89,9 @@ for _, row in summary.iterrows():
     c2.metric("Decreases", row.get("decrease", 0))
     c3.metric("No change", row.get("unchanged", 0))
 
-# GBP formatter (Python side)
 
-def gbp(x):
-    if pd.isna(x):
-        return ""
-    x = float(x)
-    sign = "-" if x < 0 else ""
-    return f"{sign}£{abs(x):,.0f}"
 
-def gbp2f(x):
-    if pd.isna(x):
-        return ""
-    x = float(x)
-    sign = "-" if x < 0 else ""
-    return f"{sign}£{abs(x):,.2f}"
 
-# Top filter by ICB
-
-st.header("Drug Tariff price change estimator", divider ="blue")
-
-st.markdown(f"### Drug Tariff month: {max_tariff_date}")
-st.markdown(f"### Prescribing data used for estimate: {max_rx_date}")
-
-st.markdown (f"#### Total changes for {max_tariff_date}")
-st.markdown (f"VMPPs with price reduction: {num_decreased}")
-st.markdown (f"VMPPs with price increase: {num_increased}")
-st.markdown (f"VMPPs unchanged: {num_unchanged}")
 
 names = ["(All)"] + sorted(icb_df["name"].dropna().unique().tolist())
 st.markdown("### Select Integrated Care Board")
