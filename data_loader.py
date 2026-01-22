@@ -34,12 +34,12 @@ def run_query(query):
 @st.cache_data
 def get_cached_max_rxdate():
     result = run_query(maxrxdate_sql)
-    return result[0]["max_rxdate"]  # Adjust key name as needed
+    return result[0]["max_month"]
 
 @st.cache_data
 def get_cached_max_tariffdate():
     result = run_query(maxtariffdate_sql)
-    return result[0]["max_tariffdate"]  # Adjust key name as needed
+    return result[0]["max_month"]
 
 # Main data loader that refreshes cache when either date changes
 def get_fresh_data_if_needed():

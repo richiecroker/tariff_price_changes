@@ -1,14 +1,15 @@
 import streamlit as st
 import pandas as pd
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
+from db_loader import get_fresh_data_if_needed  # Import the data loader
 
 # Set wide layout
 st.set_page_config(layout="wide")
 
-# Load CSVs (to be replaced with SQL)
-
-icb_df = pd.read_csv("icbpricechanges.csv")
-vmpp_df = pd.read_csv("vmpppricechanges.csv")
+# Load data from SQL queries
+icb_data, vmpp_data = get_fresh_data_if_needed()
+icb_df = pd.DataFrame(icb_data)
+vmpp_df = pd.DataFrame(vmpp_data)
 
 # GBP formatter (Python side)
 
