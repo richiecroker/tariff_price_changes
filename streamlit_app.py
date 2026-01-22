@@ -54,6 +54,8 @@ st.markdown(f"### Prescribing data used for estimate: {max_rx_date}")
 
 st.markdown (f"#### Total changes for {max_rx_date}")
 st.markdown (f"VMPPs with price reduction: {num_decreased}")
+st.markdown (f"VMPPs with price increase: {num_increased}")
+st.markdown (f"VMPPs unchanged: {num_unchanged}")
 
 names = ["(All)"] + sorted(icb_df["name"].dropna().unique().tolist())
 st.markdown("### Select Integrated Care Board")
