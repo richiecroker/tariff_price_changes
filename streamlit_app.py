@@ -28,6 +28,7 @@ num_increased = (price > prev).sum()
 num_decreased = (price < prev).sum()
 num_unchanged = (price == prev).sum()
 
+
 # GBP formatter (Python side)
 
 def gbp(x):
@@ -50,6 +51,8 @@ st.header("Drug Tariff price change estimator", divider ="blue")
 
 st.markdown(f"### Drug Tariff month: {max_tariff_date}")
 st.markdown(f"### Prescribing data used for estimate: {max_rx_date}")
+
+st.markdown ("#### Total changes for {max_rx_date}")
 
 names = ["(All)"] + sorted(icb_df["name"].dropna().unique().tolist())
 st.markdown("### Select Integrated Care Board")
