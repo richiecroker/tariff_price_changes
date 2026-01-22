@@ -196,17 +196,9 @@ if not bnf_code:
     st.stop()
 
 # =============================
-# Selected summary
+# Selected summary (as indented line)
 # =============================
-st.markdown(f"### Details for **{bnf_name}**")
-st.dataframe(
-    pd.DataFrame([{
-        "BNF name": bnf_name,
-        "Price difference": total
-    }]).style.format({"Price difference": gbp}),
-    hide_index=True,
-    use_container_width=True
-)
+st.markdown(f"**{bnf_name}** — Price difference: **{gbp(total)}**")
 
 # =============================
 # Detail rows from vmpp_df
