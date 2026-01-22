@@ -190,9 +190,3 @@ if len(selected) > 0:
                 use_container_width=True
             )
             
-            st.download_button(
-                "Download details as CSV",
-                details_df.to_csv(index=False),
-                file_name=f"vmpp_{bnf_code}.csv",
-                mime="text/csv"
-            )
