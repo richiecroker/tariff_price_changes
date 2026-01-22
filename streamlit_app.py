@@ -16,7 +16,7 @@ vmpp_df = pd.DataFrame(vmpp_data)
 raw_max_rx_date = data_loader.get_cached_max_rxdate()
 max_rx_date = pd.to_datetime(raw_max_rx_date, errors="coerce").strftime("%B %Y")
 
-raw_max_tariff_date = data_loader.get_cached_maxtariff_date()
+raw_max_tariff_date = data_loader.get_cached_max_tariffdate()
 max_tariff_date = pd.to_datetime(raw_max_tariff_date, errors="coerce").strftime("%B %Y")
 
 # GBP formatter (Python side)
