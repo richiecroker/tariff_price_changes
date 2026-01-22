@@ -3,10 +3,14 @@ import pandas as pd
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
 
 # =============================
-# Load CSVs FIRST
+# Load CSVs with error handling
 # =============================
-icb_df = pd.read_csv("icbpricechanges.csv")
-vmpp_df = pd.read_csv("vmpppricechanges.csv")
+try:
+    icb_df = pd.read_csv("icbpricechanges.csv")
+    vmpp_df = pd.read_csv("vmpppricechanges.csv")
+except FileNotFoundError as e:
+    st.error(f"CSV file not found: {e}")
+    st.stop()
 
 # =============================
 # Top filter by name
@@ -101,8 +105,9 @@ function(params) {
 # =============================
 price_formatter = JsCode("""
 function(params) {
-    if (params.value == null) return '';
+    if (params.value == null || params.value === undefined) return '';
     const v = Number(params.value);
+    if (isNaN(v)) return '';
     const sign = v < 0 ? '-' : '';
     const abs = Math.abs(v).toLocaleString('en-GB', {
         minimumFractionDigits: 2,
@@ -119,15 +124,17 @@ st.subheader("Master (aggregated by BNF)")
 
 gb = GridOptionsBuilder.from_dataframe(master_df)
 
-gb.configure_column("bnf_name", header_name="BNF name", sortable=True)
+gb.configure_column("bnf_name", header_name="BNF name", sortable=True, width=400)
 gb.configure_column(
     "price_difference_sum",
     header_name="Price difference",
     sortable=True,
     type=["numericColumn"],
     valueFormatter=price_formatter,
+    width=200,
     cellStyle=JsCode("""
         function(p) {
+            if (p.value == null) return {};
             if (p.value < 0) return {color: 'red'};
             if (p.value > 0) return {color: 'green'};
             return {};
@@ -139,7 +146,7 @@ gb.configure_column(
     "drill",
     header_name="",
     cellRenderer=drill_button_renderer,
-    maxWidth=50,
+    width=50,
     suppressSizeToFit=True,
     sortable=False,
     filter=False
@@ -148,7 +155,8 @@ gb.configure_column(
 # hidden but needed for drill
 gb.configure_column("bnf_code", hide=True)
 
-gb.configure_selection("single")
+gb.configure_selection("single", use_checkbox=False)
+gb.configure_grid_options(rowSelection='single')
 grid_opts = gb.build()
 
 grid_response = AgGrid(
@@ -156,8 +164,9 @@ grid_response = AgGrid(
     gridOptions=grid_opts,
     update_mode=GridUpdateMode.SELECTION_CHANGED,
     allow_unsafe_jscode=True,
-    fit_columns_on_grid_load=True,
-    height=420
+    fit_columns_on_grid_load=False,
+    height=420,
+    theme='streamlit'
 )
 
 # =============================
@@ -165,14 +174,26 @@ grid_response = AgGrid(
 # =============================
 selected = grid_response.get("selected_rows")
 
-if not isinstance(selected, list) or len(selected) == 0:
+# Handle different return types from AgGrid
+if selected is None:
+    selected = []
+elif isinstance(selected, pd.DataFrame):
+    selected = selected.to_dict('records')
+elif not isinstance(selected, list):
+    selected = []
+
+if len(selected) == 0:
     st.info("Click ▶ to drill down")
     st.stop()
 
 sel = selected[0]
-bnf_code = sel["bnf_code"]
-bnf_name = sel["bnf_name"]
-total = sel["price_difference_sum"]
+bnf_code = sel.get("bnf_code")
+bnf_name = sel.get("bnf_name")
+total = sel.get("price_difference_sum")
+
+if not bnf_code:
+    st.warning("No BNF code found in selection")
+    st.stop()
 
 # =============================
 # Selected summary
