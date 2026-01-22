@@ -83,7 +83,7 @@ summary = (
 )
 
 for _, row in summary.iterrows():
-    st.caption(f"Category: {row['tariff_category']}")
+    st.markdown(f"**Category: {row['tariff_category']}**")
     c1, c2, c3 = st.columns(3)
     c1.write(f"Increases: {row.get('increase', 0)}")
     c2.write(f"Decreases: {row.get('decrease', 0)}")
