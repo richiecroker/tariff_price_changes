@@ -3,8 +3,8 @@ import pandas as pd
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
 
 # ---------- Load CSVs (assume done earlier) ----------
- icb_df = pd.read_csv("icbpricechanges.csv")
- vmpp_df = pd.read_csv("vmpppricechanges.csv")
+icb_df = pd.read_csv("icbpricechanges.csv")
+vmpp_df = pd.read_csv("vmpppricechanges.csv")
 
 # ---------- top filter by name (unchanged) ----------
 names = ["(All)"] + sorted(icb_df["name"].dropna().unique().tolist())
