@@ -27,6 +27,12 @@ else:
     filtered_icb = icb_df.copy()
 
 # =============================
+# Calculate and display total difference
+# =============================
+total_difference = pd.to_numeric(filtered_icb["price_difference"], errors="coerce").fillna(0).sum()
+st.metric(label="Total Price Difference", value=gbp(total_difference))
+
+# =============================
 # GBP formatter (Python side)
 # =============================
 def gbp(x):
@@ -137,8 +143,8 @@ gb.configure_column(
     cellStyle=JsCode("""
         function(p) {
             if (p.value == null) return {};
-            if (p.value < 0) return {color: 'red'};
-            if (p.value > 0) return {color: 'green'};
+            if (p.value < 0) return {color: 'green'};
+            if (p.value > 0) return {color: 'red'};
             return {};
         }
     """)
