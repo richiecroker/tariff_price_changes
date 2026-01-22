@@ -30,22 +30,6 @@ from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
 st.set_page_config(layout="wide")
 st.title("BNF → Pack drilldown (memory-friendly)")
 
-import streamlit as st
-import pandas as pd
-import numpy as np
-from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
-
-st.set_page_config(layout="wide")
-st.title("BNF → Pack drilldown (memory-friendly)")
-
-import streamlit as st
-import pandas as pd
-import numpy as np
-from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
-
-st.set_page_config(layout="wide")
-st.title("BNF → Pack drilldown (memory-friendly)")
-
 @st.cache_data
 def load_and_prepare_tree(path="pricechangedemo.csv", nrows=None, max_parents=50):
     """Load data and build tree structure with limited rows"""
@@ -160,11 +144,15 @@ gb.configure_grid_options(
     getDataPath=getDataPath,
     autoGroupColumnDef={
         "headerName": "BNF / Pack",
-        "minWidth": 400,
+        "minWidth": 600,
+        "width": 600,
         "cellRendererParams": {"suppressCount": True}
     },
     groupDefaultExpanded=-1,  # Start collapsed
 )
+
+# Make sure columns fit
+gb.configure_default_column(resizable=True, filterable=False)
 
 # Pagination
 gb.configure_pagination(
@@ -179,7 +167,8 @@ AgGrid(
     height=600,
     allow_unsafe_jscode=True,
     theme="streamlit",
-    fit_columns_on_grid_load=True
+    fit_columns_on_grid_load=False,  # Don't auto-fit, use our widths
+    update_mode="NO_UPDATE"
 )
 
 if max_parents >= 200:
