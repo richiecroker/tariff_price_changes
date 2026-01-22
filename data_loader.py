@@ -48,8 +48,8 @@ def get_fresh_data_if_needed():
     cached_max_tariff = get_cached_max_tariffdate()
     
     # Get current max dates directly from DB (not cached)
-    current_max_rx = run_query(maxrxdate_sql)[0]["max_rxdate"]
-    current_max_tariff = run_query(maxtariffdate_sql)[0]["max_tariffdate"]
+    current_max_rx = run_query(maxrxdate_sql)[0]["max_month"]
+    current_max_tariff = run_query(maxtariffdate_sql)[0]["max_month"]
     
     # Check if either date has changed
     if current_max_rx != cached_max_rx or current_max_tariff != cached_max_tariff:
