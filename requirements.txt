@@ -1,3 +1,5 @@
 streamlit
 pandas
 streamlit-aggrid
+google-cloud-bigquery
+google-auth
