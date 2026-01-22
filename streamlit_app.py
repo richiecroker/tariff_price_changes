@@ -25,7 +25,7 @@ st.dataframe(df)
 import streamlit as st
 import pandas as pd
 import numpy as np
-from st_aggrid import AgGrid, GridOptionsBuilder
+from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
 
 st.set_page_config(layout="wide")
 st.title("BNF → Pack drilldown (memory-friendly)")
@@ -64,111 +64,99 @@ def load_and_prepare_tree(path="pricechangedemo.csv", nrows=None, max_parents=50
     # Filter parent data to top only
     parent_subset = parent_agg[parent_agg["bnf_name"].isin(top_parents)].copy()
     
-    # Build tree structure efficiently with list operations
-    # Parent rows - create paths as lists
-    parent_paths = [[bnf] for bnf in parent_subset["bnf_name"].tolist()]
-    parent_prices = parent_subset["price_difference"].tolist()
-    
-    # Child rows - create paths efficiently
-    child_paths = [[bnf, pack] for bnf, pack in zip(pack_list["bnf_name"], pack_list["nm"])]
-    child_prices = [np.nan] * len(child_paths)
-    
-    # Create final tree dataframe
-    all_paths = parent_paths + child_paths
-    all_prices = parent_prices + child_prices
-    
-    tree_df = pd.DataFrame({
-        "path": all_paths,
-        "price_difference": all_prices
+    # Build parent rows
+    parent_df = pd.DataFrame({
+        "orgHierarchy": parent_subset["bnf_name"].tolist(),
+        "price_difference": parent_subset["price_difference"].tolist()
     })
     
-    # Sort by first element of path (BNF name) and depth
-    tree_df["_sort"] = tree_df["path"].str[0]
-    tree_df["_depth"] = tree_df["path"].str.len()
-    tree_df = tree_df.sort_values(["_sort", "_depth"]).drop(columns=["_sort", "_depth"])
+    # Build child rows with hierarchy path
+    child_df = pd.DataFrame({
+        "orgHierarchy": [f"{bnf}|{pack}" for bnf, pack in zip(pack_list["bnf_name"], pack_list["nm"])],
+        "price_difference": [np.nan] * len(pack_list)
+    })
     
-    return tree_df.reset_index(drop=True)
+    # Combine
+    tree_df = pd.concat([parent_df, child_df], ignore_index=True)
+    
+    return tree_df
 
 # User input
 max_parents = st.number_input(
     "Max number of BNF (parents) to show", 
     min_value=10, 
-    max_value=200,  # Hard cap to prevent crashes
-    value=30,  # Conservative default
+    max_value=200,
+    value=30,
     step=10
 )
 
-# Load data with the specified limit
+# Load data
 tree_df = load_and_prepare_tree(max_parents=max_parents)
 
 st.write(f"Displaying {len(tree_df):,} total rows")
 
-# Validate
-if len(tree_df) == 0:
-    st.error("No data to display")
-    st.stop()
+# JavaScript function to parse the hierarchy
+getDataPath = JsCode("""
+function(data) {
+    return data.orgHierarchy.split('|');
+}
+""")
 
-# Configure AgGrid with tree data
+# Configure AgGrid
 gb = GridOptionsBuilder.from_dataframe(tree_df)
 
-# Don't configure the path column separately - let autoGroupColumnDef handle it
+# Hide the orgHierarchy column
+gb.configure_column("orgHierarchy", hide=True)
 
-# Configure price difference column
+# Configure price difference
 gb.configure_column(
     "price_difference",
     header_name="Price Difference",
     type=["numericColumn"],
-    valueFormatter="x == null ? '' : '£' + x.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})",
-    cellStyle={
-        "styleConditions": [
-            {
-                "condition": "params.value > 0",
-                "style": {"color": "#d32f2f", "fontWeight": "600"}
-            },
-            {
-                "condition": "params.value < 0",
-                "style": {"color": "#388e3c", "fontWeight": "600"}
-            }
-        ]
+    valueFormatter=JsCode("""
+    function(params) {
+        if (params.value == null) return '';
+        return '£' + params.value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
     }
+    """),
+    cellStyle=JsCode("""
+    function(params) {
+        if (params.value == null) return null;
+        if (params.value > 0) return {color: '#d32f2f', fontWeight: '600'};
+        if (params.value < 0) return {color: '#388e3c', fontWeight: '600'};
+        return null;
+    }
+    """)
 )
 
-# Configure tree data
+# Configure tree grid
 gb.configure_grid_options(
     treeData=True,
     animateRows=False,
-    groupDefaultExpanded=-1,  # -1 means start collapsed, user clicks to expand
+    getDataPath=getDataPath,
     autoGroupColumnDef={
         "headerName": "BNF / Pack",
         "minWidth": 400,
-        "cellRendererParams": {
-            "suppressCount": True
-        }
+        "cellRendererParams": {"suppressCount": True}
     },
-    getDataPath="function(data) { var path = data.path; return path; }",
+    groupDefaultExpanded=-1,  # Start collapsed
 )
 
-# Add pagination to limit rendered rows
+# Pagination
 gb.configure_pagination(
     paginationAutoPageSize=False,
-    paginationPageSize=50  # Only render 50 rows at a time
+    paginationPageSize=50
 )
 
-# Build options
-grid_options = gb.build()
-
-# Display grid
+# Display
 AgGrid(
     tree_df,
-    gridOptions=grid_options,
+    gridOptions=gb.build(),
     height=600,
-    theme="streamlit",
-    enable_enterprise_modules=False,
     allow_unsafe_jscode=True,
-    fit_columns_on_grid_load=True,
-    update_mode="NO_UPDATE"
+    theme="streamlit",
+    fit_columns_on_grid_load=True
 )
 
-# Show warning if at max
 if max_parents >= 200:
     st.warning("⚠️ At maximum display limit. Showing more rows may cause browser memory issues.")
