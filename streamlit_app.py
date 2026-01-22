@@ -105,17 +105,17 @@ top_increases.columns = ["BNF Name", "Price Difference"]
 col1, col2 = st.columns(2)
 
 with col1:
-    st.subheader("Top 10 Price Reductions")
+    st.subheader("Top 10 estimated cost reductions")
     st.dataframe(
-        top_reductions.style.format({"Price Difference": gbp}),
+        top_reductions.style.format({"Estimate Cost Difference": gbp}),
         hide_index=True,
         use_container_width=True
     )
 
 with col2:
-    st.subheader("Top 10 Price Increases")
+    st.subheader("Top 10 estimated cost increases")
     st.dataframe(
-        top_increases.style.format({"Price Difference": gbp}),
+        top_increases.style.format({"Estimate Cost Difference": gbp}),
         hide_index=True,
         use_container_width=True
     )
