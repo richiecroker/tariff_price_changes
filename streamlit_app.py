@@ -98,7 +98,7 @@ function(params) {
 
 # Build Master Grid with master-detail
 # =============================
-st.subheader("Estimated cost difference per presentation")
+st.subheader("Estimated cost difference per presentation", divider="blue")
 
 gb = GridOptionsBuilder.from_dataframe(master_df)
 
