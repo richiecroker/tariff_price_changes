@@ -13,7 +13,8 @@ icb_df = pd.DataFrame(icb_data)
 vmpp_df = pd.DataFrame(vmpp_data)
 
 # Get latest dates
-max_rx_date = (pd.to_datetime(data_loader.get_cached_max_rxdate(), errors="coerce").strftime("%B %Y"))
+raw_max_rx_date = data_loader.get_cached_max_rxdate()
+max_rx_date = pd.to_datetime(raw_max_rx_date, errors="coerce").strftime("%B %Y")
 
 max_tariff_date = data_loader.get_cached_max_tariffdate()
 
