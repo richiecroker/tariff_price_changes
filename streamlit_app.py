@@ -130,6 +130,15 @@ function(params) {
 # =============================
 st.subheader("Master (aggregated by BNF)")
 
+# Add download button for full dataset
+csv_data = master_df[master_df["is_detail"] == False][["bnf_name", "bnf_code", "price_difference_sum"]].to_csv(index=False)
+st.download_button(
+    "Download full table as CSV",
+    csv_data,
+    file_name=f"bnf_prices_{selected_name.replace(' ', '_')}.csv",
+    mime="text/csv"
+)
+
 gb = GridOptionsBuilder.from_dataframe(master_df)
 
 gb.configure_column("bnf_name", header_name="BNF name", sortable=True, flex=2)
@@ -153,6 +162,9 @@ gb.configure_column(
 gb.configure_column("bnf_code", hide=True)
 gb.configure_column("is_detail", hide=True)
 gb.configure_column("drill", hide=True)
+
+# Configure pagination
+gb.configure_pagination(paginationAutoPageSize=False, paginationPageSize=30)
 
 # Hide detail rows by default
 gb.configure_grid_options(
