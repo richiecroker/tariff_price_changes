@@ -17,7 +17,7 @@ def gbp(x):
         return ""
     x = float(x)
     sign = "-" if x < 0 else ""
-    return f"{sign}£{abs(x):,.2f}"
+    return f"{sign}£{abs(x):,.0f}"
 
 # Top filter by ICB
 
