@@ -1,14 +1,14 @@
 import streamlit as st
 import pandas as pd
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
-import db_loader
+import data_loader
 
 
 # Set wide layout
 st.set_page_config(layout="wide")
 
 # Load data from SQL queries
-icb_data, vmpp_data = db_loader.get_fresh_data_if_needed()
+icb_data, vmpp_data = data_loader.get_fresh_data_if_needed()
 icb_df = pd.DataFrame(icb_data)
 vmpp_df = pd.DataFrame(vmpp_data)
 
