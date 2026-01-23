@@ -88,16 +88,28 @@ for _, row in summary.iterrows():
 
 
 
-
-
+# ICB Filter
 names = ["(All)"] + sorted(icb_df["name"].dropna().unique().tolist())
 st.markdown("### Select Integrated Care Board")
 selected_name = st.selectbox("Select Integrated Care Board", names, label_visibility="collapsed")
 
+# NEW: Tariff Category Filter
+tariff_cats = ["(All)"] + sorted(icb_df["tariff_cat"].dropna().unique().tolist())
+st.markdown("### Select Tariff Category")
+selected_tariff_cat = st.selectbox("Select Tariff Category", tariff_cats, label_visibility="collapsed")
+
+# Apply both filters
 if selected_name != "(All)":
     filtered_icb = icb_df[icb_df["name"] == selected_name].copy()
 else:
     filtered_icb = icb_df.copy()
+
+if selected_tariff_cat != "(All)":
+    filtered_icb = filtered_icb[filtered_icb["tariff_cat"] == selected_tariff_cat].copy()
+
+# Calculate and display total price change
+total_difference = pd.to_numeric(filtered_icb["price_difference"], errors="coerce").fillna(0).sum()
+st.markdown(f"### Total estimated monthly price difference: {gbp(total_difference)}")
 
 # Calculate and display total price change
 total_difference = pd.to_numeric(filtered_icb["price_difference"], errors="coerce").fillna(0).sum()
