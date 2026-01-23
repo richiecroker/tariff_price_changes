@@ -79,6 +79,7 @@ SELECT
   icb.name,
   rx.bnf_name,
   rx.bnf_code,
+  dtcat.descr AS tariff_cat,
   SUM(quantity * bnf.price_diff_pu * is_max_price_diff_pu) AS price_difference
 FROM hscic.normalised_prescribing rx
 INNER JOIN hscic.ccgs ccgs
@@ -87,7 +88,10 @@ INNER JOIN hscic.stps icb
   ON ccgs.stp_id = icb.code
 INNER JOIN bnf_code_price_changes bnf
   ON bnf.bnf_code = rx.bnf_code
+INNER JOIN dmd.dtpaymentcategory as dtcat
+ON  
+  bnf.tariff_category = dtcat.cd
 WHERE month = (SELECT MAX(month) FROM hscic.normalised_prescribing)
   AND ccgs.org_type = 'CCG'
   AND ccgs.close_date IS NULL
-GROUP BY icb.name, rx.bnf_name, rx.bnf_code
+GROUP BY icb.name, rx.bnf_name, rx.bnf_code,tariff_cat
