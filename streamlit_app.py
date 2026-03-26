@@ -28,16 +28,6 @@ conn = get_duckdb_connection()
 
 icb_df = conn.execute("""
     SELECT
-        t.bnf_code,
-        t.nm,
-        t.tariff_cat,
-        t.price_diff_pu,
-        SUM(p.quantity * t.price_diff_pu * t.is_max_price_diff_pu) AS price_difference
-    FROM tariff_price_changes t
-    INNER JOIN prescribing p ON p.bnf_code = t.bnf_code
-    GROUP BY t.bnf_code, t.nm, t.tariff_cat, t.price_diff_pu
-
-    SELECT
         rx.name,
         rx.bnf_name,
         rx.bnf_code,
