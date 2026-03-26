@@ -35,7 +35,7 @@ def _bq_client():
 def _latest_bq_month(table: str, date_col: str) -> str | None:
     bq = _bq_client()
     try:
-        result = bq.query(f"SELECT MAX({date_col}) FROM `{table}`").result()
+        result = bq.query(f"SELECT DATE(MAX({date_col})) FROM `{table}`").result()
         row = list(result)[0]
         return str(row[0]) if row[0] else None
     except Exception as e:
