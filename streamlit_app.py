@@ -57,7 +57,7 @@ conn = get_duckdb_connection()
 
 icb_df = conn.execute("""
     SELECT
-        rx.name,
+        rx.icb_name,
         rx.bnf_name,
         rx.bnf_code,
         dt.tariff_cat,
@@ -65,7 +65,7 @@ icb_df = conn.execute("""
     FROM prescribing AS rx
     INNER JOIN tariff_price_changes AS dt
     ON rx.bnf_code = dt.bnf_code
-    GROUP BY rx.name, rx.bnf_name, rx.bnf_code, dt.tariff_cat
+    GROUP BY rx.icb_name, rx.bnf_name, rx.bnf_code, dt.tariff_cat
     """).df()
 
 st.dataframe(icb_df)
