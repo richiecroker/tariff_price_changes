@@ -10,8 +10,8 @@ st.set_page_config(layout="wide")
 st.image("OpenPrescribing.svg")
 
 st.info(
-    """##### Hello!  This is a **very** early prototype of calculating drug price changes. 
-    Please let us know what you think, and what you'd like to see.  Email us at [bennett@phc.ox.ac.uk](mailto:bennett@phc.ox.ac.uk)"""
+    """##### Hello!  This is a **very** early prototype of analysing hospital FP10s that have been dispensed in the community.  
+Please let us know what you think, and what you'd like to see.  Email us at [bennett@phc.ox.ac.uk](mailto:bennett@phc.ox.ac.uk)"""
 )
 
 # Load data from SQL queries
