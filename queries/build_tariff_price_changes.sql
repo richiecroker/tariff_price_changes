@@ -49,10 +49,12 @@ agg_price_changes AS (
     pc.vmpp,
     vf.bnf_code,
     pc.tariff_category,
+    dtcat.descr AS tariff_cat,
     pc.price_pence,
     pc.prev_tariff_category,
+    prev_dtcat.descr AS prev_tariff_cat,
     pc.previous_price_pence,
-    vf.nm,
+        vf.nm,
     (((1 - COALESCE(tf.discount, 0.05)) * pc.price_pence) - 
     ((1 - COALESCE(ptf.discount, 0.05)) * pc.previous_price_pence)) / (vf.qtyval * 100) AS price_diff_pu
   FROM price_changes pc
@@ -62,6 +64,10 @@ agg_price_changes AS (
     ON pc.tariff_category = tf.category
   INNER JOIN tariff_map ptf
     ON pc.prev_tariff_category = ptf.category
+  INNER JOIN dmd.dtpaymentcategory AS dtcat
+    ON pc.tariff_category = dtcat.cd
+  INNER JOIN dmd.dtpaymentcategory AS prev_dtcat
+    ON pc.prev_tariff_category = prev_dtcat.cd
 ),
 
 bnf_code_price_changes AS (

@@ -35,14 +35,14 @@ def _bq_client():
 
 # --- Helper functions ---
 
-def _latest_bq_month() -> str | None:
+def _latest_bq_month(table: str, date_col: str) -> str | None:
     bq = _bq_client()
     try:
-        result = bq.query("SELECT max(month) FROM `ebmdatalab.measures.global_data_lpzomnibus`").result()
+        result = bq.query(f"SELECT MAX({date_col}) FROM `{table}`").result()
         row = list(result)[0]
-        return str(row[0])  # returns as yyyy-mm-dd string
+        return str(row[0]) if row[0] else None
     except Exception as e:
-        logger.error("Failed to get latest month from BigQuery: %s", e)
+        logger.error("Failed to get latest %s from %s: %s", date_col, table, e)
         return None
 
 def _cached_month(conn) -> str | None:
@@ -93,39 +93,50 @@ def _save_db_to_gcs(bucket):
 
 # --- Main entry point ---
 
-@st.cache_resource  # tells Streamlit to only run this once and reuse the connection across sessions
+@st.cache_resource
 def get_duckdb_connection():
     storage_client = _gcs_client()
     bucket = storage_client.bucket(BUCKET_NAME)
 
-    # find out what the latest available data month is
-    latest_csv = _latest_csv_yyyymm(bucket)
-    logger.info("Latest CSV month in GCS: %s", latest_csv)
+    latest_prescribing_month = _latest_bq_month("hscic.normalised_prescribing", "month")
+    latest_tariff_date = _latest_bq_month("dmd.tariffprice", "date")
+    logger.info("Latest prescribing month in BQ: %s", latest_prescribing_month)
+    logger.info("Latest tariff date in BQ: %s", latest_tariff_date)
 
     # --- Check 1: is there already a local DB that's up to date? ---
     if os.path.exists(LOCAL_DB):
         try:
             conn = duckdb.connect(LOCAL_DB)
             tables = [r[0] for r in conn.execute("SHOW TABLES").fetchall()]
-            if _cached_yyyymm(conn) == latest_csv and "ods_mapping" in tables and "prescribing" in tables:
+            if (
+                "prescribing" in tables
+                and "tariff_price_changes" in tables
+                and _cached_month_for_table(conn, "prescribing", "month") == latest_prescribing_month
+                and _cached_month_for_table(conn, "tariff_price_changes", "date") == latest_tariff_date
+            ):
                 logger.info("Local DuckDB is up to date, reusing.")
-                return conn  # already have what we need, return early
+                return conn
             conn.close()
             logger.info("Local DuckDB is stale.")
         except Exception as e:
             logger.warning("Local DuckDB unusable: %s", e)
 
-    # --- Check 2: download the cached DB from GCS and see if that's up to date ---
+# --- Check 2: download the cached DB from GCS and see if that's up to date ---
     tmp_path = LOCAL_DB + ".tmp"
     try:
         with st.spinner("Downloading cached database..."):
             bucket.blob(GCS_DB_PATH).download_to_filename(tmp_path)
-        os.replace(tmp_path, LOCAL_DB)  # atomically replace local DB with downloaded version
+        os.replace(tmp_path, LOCAL_DB)
         conn = duckdb.connect(LOCAL_DB)
         tables = [r[0] for r in conn.execute("SHOW TABLES").fetchall()]
-        if _cached_yyyymm(conn) == latest_csv and "ods_mapping" in tables and "prescribing" in tables:
+        if (
+            "prescribing" in tables
+            and "tariff_price_changes" in tables
+            and _cached_month_for_table(conn, "prescribing", "month") == latest_prescribing_month
+            and _cached_month_for_table(conn, "tariff_price_changes", "date") == latest_tariff_date
+        ):
             logger.info("GCS-cached DuckDB is up to date, using it.")
-            return conn  # GCS cache is fresh enough, use it
+            return conn
         logger.info("GCS-cached DuckDB is stale or missing tables, doing full rebuild.")
         conn.close()
     except Exception as e:
@@ -135,24 +146,22 @@ def get_duckdb_connection():
 
     # --- Fallback: full rebuild from BigQuery ---
     if os.path.exists(LOCAL_DB):
-        os.remove(LOCAL_DB)  # start fresh
+        os.remove(LOCAL_DB)
 
     with st.spinner("Rebuilding database from source data - this may take a few minutes..."):
         conn = duckdb.connect(LOCAL_DB)
-        _rebuild_table(conn, "prescribing", "build_prescribing.sql")   # pull prescribing data from BQ
-        _rebuild_table(conn, "ods_mapping", "build_ods_mapping.sql")   # pull ODS mapping from BQ
-        conn.checkpoint()  # flush everything to disk
+        _rebuild_table(conn, "prescribing", "build_prescribing.sql")
+        _rebuild_table(conn, "tariff_price_changes", "build_tariff_price_changes.sql")
+        conn.checkpoint()
         conn.close()
 
     logger.info("DB file exists after rebuild: %s, size: %s",
                 os.path.exists(LOCAL_DB),
                 os.path.getsize(LOCAL_DB) if os.path.exists(LOCAL_DB) else "N/A")
 
-    # sanity check — if the file still doesn't exist something went badly wrong
     if not os.path.exists(LOCAL_DB):
         logger.error("DuckDB file not created at %s", LOCAL_DB)
         return duckdb.connect(LOCAL_DB)
 
-    # save the freshly built DB to GCS for next time
     _save_db_to_gcs(bucket)
     return duckdb.connect(LOCAL_DB)
