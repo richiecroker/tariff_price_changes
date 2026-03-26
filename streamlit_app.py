@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
-import data_loader
+from data_loader import _bq_client
 
 import logging
 logging.basicConfig(level=logging.INFO)
@@ -21,9 +21,6 @@ st.title("Drug Tariff price change estimator")
 
 
 
-
-import streamlit as st
-from data_loader import _bq_client
 
 st.title("Connection Test")
 
