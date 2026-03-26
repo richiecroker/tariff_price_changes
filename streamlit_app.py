@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
-from db import _bq_client
+
 
 import logging
 logging.basicConfig(level=logging.INFO)
@@ -21,24 +21,15 @@ st.title("Drug Tariff price change estimator")
 
 
 
+from db import _bq_client, _latest_bq_month, get_duckdb_connection
 
-from db import _bq_client, _latest_bq_month
-
-st.title("Connection Test")
-
-if st.button("Test BQ Connection"):
+if st.button("Test DuckDB connection"):
     try:
-        bq = _bq_client()
-        result = bq.query("SELECT 1").result()
-        st.success("BQ connection OK")
+        conn = get_duckdb_connection()
+        tables = [r[0] for r in conn.execute("SHOW TABLES").fetchall()]
+        st.success(f"DuckDB connected, tables: {tables}")
     except Exception as e:
-        st.error(f"BQ connection failed: {e}")
-
-if st.button("Test latest dates"):
-    prescribing = _latest_bq_month("hscic.normalised_prescribing", "month")
-    tariff = _latest_bq_month("dmd.tariffprice", "date")
-    st.write(f"Latest prescribing month: {prescribing}")
-    st.write(f"Latest tariff date: {tariff}")
+        st.error(f"DuckDB connection failed: {e}")
 
 
 
