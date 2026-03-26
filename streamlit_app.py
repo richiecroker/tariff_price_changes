@@ -128,7 +128,7 @@ with st.sidebar:
     st.markdown(f"### Prescribing data used for estimate: {datetime.strptime(max_rx_date, '%Y-%m-%d').strftime('%B %Y')}")
 
     # ICB Filter
-    names = ["(All)"] + sorted(icb_df["icb_ame"].dropna().unique().tolist())
+    names = ["(All)"] + sorted(icb_df["icb_name"].dropna().unique().tolist())
     st.markdown("### Select Integrated Care Board")
     selected_name = st.selectbox("Select Integrated Care Board", names, label_visibility="collapsed")
     
