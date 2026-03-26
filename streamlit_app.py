@@ -149,3 +149,34 @@ with st.sidebar:
         filtered_icb = filtered_icb[filtered_icb["tariff_cat"] == selected_tariff_cat].copy()
 
 st.markdown (f"#### Total changes for {max_tariff_date}")
+
+# Coerce prices to numeric
+price = pd.to_numeric(vmpp_df["price_pence"], errors="coerce")
+prev = pd.to_numeric(vmpp_df["previous_price_pence"], errors="coerce")
+
+# Only compare rows with both values present
+df = vmpp_df.copy()
+df["price"] = price
+df["prev_price"] = prev
+
+df = df[df["price"].notna() & df["prev_price"].notna()]
+
+# Create change label
+df["price_change"] = "unchanged"
+df.loc[df["price"] > df["prev_price"], "price_change"] = "increase"
+df.loc[df["price"] < df["prev_price"], "price_change"] = "decrease"
+
+# Group by category + change
+summary = (
+    df.groupby(["tariff_category", "price_change"])
+      .size()
+      .unstack(fill_value=0)
+      .reset_index()
+)
+
+for _, row in summary.iterrows():
+    st.markdown(f"**Category: {row['tariff_category']}**")
+    c1, c2, c3 = st.columns(3)
+    c1.write(f"Increases: {row.get('increase', 0)}")
+    c2.write(f"Decreases: {row.get('decrease', 0)}")
+    c3.write(f"No change: {row.get('unchanged', 0)}")
