@@ -104,6 +104,7 @@ def get_duckdb_connection():
             if (
                 "prescribing" in tables
                 and "tariff_price_changes" in tables
+                and "vmpp_tariff_changes" in tables
                 and _cached_month_for_table(conn, "prescribing", "month") == latest_prescribing_month
                 and _cached_month_for_table(conn, "tariff_price_changes", "date") == latest_tariff_date
             ):
@@ -125,6 +126,7 @@ def get_duckdb_connection():
         if (
             "prescribing" in tables
             and "tariff_price_changes" in tables
+            and "vmpp_tariff_changes" in tables
             and _cached_month_for_table(conn, "prescribing", "month") == latest_prescribing_month
             and _cached_month_for_table(conn, "tariff_price_changes", "date") == latest_tariff_date
         ):
@@ -145,6 +147,7 @@ def get_duckdb_connection():
         conn = duckdb.connect(LOCAL_DB)
         _rebuild_table(conn, "prescribing", "build_prescribing.sql")
         _rebuild_table(conn, "tariff_price_changes", "build_tariff_price_changes.sql")
+        _rebuild_table(conn, "vmpp_tariff_changes", "build_vmpp_tariff_changes.sql")
         conn.checkpoint()
         conn.close()
 
