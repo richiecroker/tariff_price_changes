@@ -1,24 +1,21 @@
-import shutil       
-import logging      
-import os           
-import re           # for regex pattern matching ???????
+import shutil
+import logging
+import os
 
-import duckdb      
+import duckdb
 import pandas as pd
 import streamlit as st
 
-from google.cloud import bigquery, storage  
-from google.oauth2 import service_account   
+from google.cloud import bigquery, storage
+from google.oauth2 import service_account
 
-# creates a logger named after this module e.g. "data_loader"
 logger = logging.getLogger(__name__)
 
 # --- Constants ---
-BUCKET_NAME  = "ebmdatalab"                          # GCS bucket where files live
-GCS_DB_PATH  = "drug_tariff/tariffpricechanges-dev.duckdb"  # where the cached DB lives in GCS
-LOCAL_DB     = "/tmp/app.duckdb"                     # where the DB is stored locally on the server
-SQL_DIR      = os.path.join(os.path.dirname(os.path.abspath(__file__)), "queries")  # path to the /queries folder next to this file
-BQ_ODS_TABLE = "ebmdatalab.scmd_pipeline.ods"        # BigQuery table for ODS data
+BUCKET_NAME  = "ebmdatalab"
+GCS_DB_PATH  = "drug_tariff/tariffpricechanges-dev.duckdb"
+LOCAL_DB     = "/tmp/app.duckdb"
+SQL_DIR      = os.path.join(os.path.dirname(os.path.abspath(__file__)), "queries")
 
 
 # --- Auth / client helpers ---
@@ -45,25 +42,22 @@ def _latest_bq_month(table: str, date_col: str) -> str | None:
         logger.error("Failed to get latest %s from %s: %s", date_col, table, e)
         return None
 
-def _cached_month(conn) -> str | None:
+def _cached_month_for_table(conn, table_name: str, date_col: str) -> str | None:
     try:
         result = conn.execute(
-            "SELECT MAX(CAST(month AS DATE)) FROM prescribing"
+            f"SELECT MAX(CAST({date_col} AS DATE)) FROM {table_name}"
         ).fetchone()
         return str(result[0]) if result[0] else None
     except Exception:
         return None
 
 def _normalise_df(df: pd.DataFrame) -> pd.DataFrame:
-    # BigQuery returns date columns in a format DuckDB doesn't like
-    # this converts any date/datetime columns to plain Python date objects
     for col in df.columns:
         if hasattr(df[col].dtype, "name") and "date" in str(df[col].dtype).lower():
             df[col] = pd.to_datetime(df[col]).dt.date
     return df
 
 def _rebuild_table(conn, table_name: str, sql_file: str):
-    # reads a SQL file, runs it in BigQuery, and loads the result into DuckDB
     with open(os.path.join(SQL_DIR, sql_file)) as f:
         sql = f.read()
     bq = _bq_client()
@@ -71,24 +65,23 @@ def _rebuild_table(conn, table_name: str, sql_file: str):
         df = _normalise_df(bq.query(sql).result().to_dataframe())
     except Exception as e:
         logger.error("BigQuery error rebuilding %s: %s", table_name, e)
-        raise  # re-raises the exception so the app knows something went wrong
-    conn.execute(f"DROP TABLE IF EXISTS {table_name}")  # remove old version if it exists
-    conn.register("_tmp", df)                           # temporarily expose the dataframe to DuckDB
-    conn.execute(f"CREATE TABLE {table_name} AS SELECT * FROM _tmp")  # write it as a proper table
-    conn.unregister("_tmp")                             # clean up the temporary reference
+        raise
+    conn.execute(f"DROP TABLE IF EXISTS {table_name}")
+    conn.register("_tmp", df)
+    conn.execute(f"CREATE TABLE {table_name} AS SELECT * FROM _tmp")
+    conn.unregister("_tmp")
 
 def _save_db_to_gcs(bucket):
-    # saves the local DuckDB file up to GCS so it can be reused next time the app starts
     with st.spinner("Saving database to GCS for next time..."):
         tmp = LOCAL_DB + ".upload.tmp"
-        shutil.copy2(LOCAL_DB, tmp)  # copy to a temp file first (avoids uploading a file that's being written)
+        shutil.copy2(LOCAL_DB, tmp)
         try:
             blob = bucket.blob(GCS_DB_PATH)
             blob.upload_from_filename(tmp, if_generation_match=None)
         except Exception as e:
-            logger.warning("Failed to save DB to GCS (non-fatal): %s", e)  # not fatal, app can still run
+            logger.warning("Failed to save DB to GCS (non-fatal): %s", e)
         finally:
-            os.remove(tmp)  # always clean up the temp file
+            os.remove(tmp)
 
 
 # --- Main entry point ---
@@ -121,7 +114,7 @@ def get_duckdb_connection():
         except Exception as e:
             logger.warning("Local DuckDB unusable: %s", e)
 
-# --- Check 2: download the cached DB from GCS and see if that's up to date ---
+    # --- Check 2: download the cached DB from GCS and see if that's up to date ---
     tmp_path = LOCAL_DB + ".tmp"
     try:
         with st.spinner("Downloading cached database..."):
