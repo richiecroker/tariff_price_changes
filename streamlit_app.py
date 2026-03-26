@@ -70,6 +70,12 @@ icb_df = conn.execute("""
 
 st.dataframe(icb_df)
 
+vmpp_df = conn.execute("""
+    SELECT * FROM vmpp_tariff_changes
+    """).df()
+
+st.dataframe(vmpp_df)
+
 # Load data from SQL queries
 #icb_data, vmpp_data = data_loader.get_fresh_data_if_needed()
 #icb_df = pd.DataFrame(icb_data)
