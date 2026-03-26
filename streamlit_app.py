@@ -89,17 +89,6 @@ vmpp_df = conn.execute("""
     """).df()
 
 
-# Load data from SQL queries
-#icb_data, vmpp_data = data_loader.get_fresh_data_if_needed()
-#icb_df = pd.DataFrame(icb_data)
-#vmpp_df = pd.DataFrame(vmpp_data)
-
-# Get latest dates
-
-#max_rx_date = pd.to_datetime(raw_max_rx_date, errors="coerce").strftime("%B %Y")
-#max_rx_date = conn.execute("SELECT MAX(month) FROM prescribing").fetchone()[0]
-
-
 dates = get_latest_dates()
 max_rx_date = dates["prescribing"]
 max_tariff_date  = dates["tariff"]
@@ -139,7 +128,7 @@ def gbp2f(x):
 
 # Top filter by ICB
 
-
+practices_df = conn.execute("SELECT * FROM practices").df()
 with st.sidebar:
     st.markdown(f"### Drug Tariff month: {datetime.strptime(max_tariff_date, '%Y-%m-%d').strftime('%B %Y')}")
     st.markdown(f"### Prescribing data used for estimate: {datetime.strptime(max_rx_date, '%Y-%m-%d').strftime('%B %Y')}")
@@ -161,6 +150,34 @@ with st.sidebar:
     
     if selected_tariff_cat != "(All)":
         filtered_icb = filtered_icb[filtered_icb["tariff_cat"] == selected_tariff_cat].copy()
+
+
+
+
+    st.header("Filters")
+    st.info("Select an organisation at any level.")
+    
+    region_opts = sorted(practices_df["region_name"].dropna().unique().tolist())
+    sel_regions = [v for v in st.session_state.get("sel_region", []) if v in region_opts]
+    sel_regions = st.multiselect("Region", region_opts, default=sel_regions, key="sel_region")
+    df_region = practices_df if not sel_regions else practices_df[practices_df["region_name"].isin(sel_regions)]
+
+    icb_opts = sorted(df_region["icb_name"].dropna().unique().tolist())
+    sel_icbs = [v for v in st.session_state.get("sel_icb", []) if v in icb_opts]
+    sel_icbs = st.multiselect("ICB", icb_opts, default=sel_icbs, key="sel_icb")
+    df_icb = df_region if not sel_icbs else df_region[df_region["icb_name"].isin(sel_icbs)]
+
+    pcn_opts = sorted(df_icb["pcn_name"].dropna().unique().tolist())
+    sel_pcns = [v for v in st.session_state.get("sel_pcn", []) if v in pcn_opts]
+    sel_pcns = st.multiselect("PCN", pcn_opts, default=sel_pcns, key="sel_pcn")
+    df_pcn = df_icb if not sel_pcns else df_icb[df_icb["pcn_name"].isin(sel_pcns)]
+
+    practice_opts = sorted(df_pcn["practice_name"].dropna().unique().tolist())
+    sel_practices = [v for v in st.session_state.get("sel_practice", []) if v in practice_opts]
+    sel_practices = st.multiselect("Practice", practice_opts, default=sel_practices, key="sel_practice")
+    df_selected = df_pcn if not sel_practices else df_pcn[df_pcn["practice_name"].isin(sel_practices)]
+
+    selected_practice_codes = df_selected["practice_code"].unique().tolist(
 
 st.markdown (f"#### Total changes for {max_tariff_date}")
 
@@ -196,10 +213,6 @@ for _, row in summary.iterrows():
     c3.write(f"No change: {row.get('unchanged', 0)}")
 
 
-
-# Calculate and display total price change
-total_difference = pd.to_numeric(filtered_icb["price_difference"], errors="coerce").fillna(0).sum()
-st.markdown(f"### Total estimated monthly price difference: {gbp(total_difference)}")
 
 # Calculate and display total price change
 total_difference = pd.to_numeric(filtered_icb["price_difference"], errors="coerce").fillna(0).sum()
