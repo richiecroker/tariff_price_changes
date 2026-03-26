@@ -180,3 +180,57 @@ for _, row in summary.iterrows():
     c1.write(f"Increases: {row.get('increase', 0)}")
     c2.write(f"Decreases: {row.get('decrease', 0)}")
     c3.write(f"No change: {row.get('unchanged', 0)}")
+
+
+
+# Calculate and display total price change
+total_difference = pd.to_numeric(filtered_icb["price_difference"], errors="coerce").fillna(0).sum()
+st.markdown(f"### Total estimated monthly price difference: {gbp(total_difference)}")
+
+# Calculate and display total price change
+total_difference = pd.to_numeric(filtered_icb["price_difference"], errors="coerce").fillna(0).sum()
+st.markdown(f"### Total estimated monthly price difference: {gbp(total_difference)}")
+
+# =======.======================
+# Master aggregation with details
+# =============================
+@st.cache_data
+def compute_master_with_details(icb_df: pd.DataFrame, vmpp_df: pd.DataFrame):
+    icb_df = icb_df.copy()
+    icb_df["price_difference"] = pd.to_numeric(
+        icb_df["price_difference"], errors="coerce"
+    ).fillna(0)
+
+    master = (
+        icb_df.groupby(["bnf_name", "bnf_code"], as_index=False)
+          .agg(price_difference_sum=("price_difference", "sum"))
+          .sort_values("price_difference_sum", ascending=True)
+          .reset_index(drop=True)
+    )
+
+    # Add VMPP details for each BNF code
+    expanded_rows = []
+    for _, row in master.iterrows():
+        # Add main row
+        expanded_rows.append({
+            "bnf_name": row["bnf_name"],
+            "bnf_code": row["bnf_code"],
+            "price_difference_sum": row["price_difference_sum"],
+            "is_detail": False,
+            "drill": ""
+        })
+        
+        # Add detail rows (hidden by default)
+        details = vmpp_df[vmpp_df["bnf_code"] == row["bnf_code"]].copy()
+        for _, detail in details.iterrows():
+            expanded_rows.append({
+                "bnf_name": f"  → {detail.get('nm', '')}",
+                "bnf_code": row["bnf_code"],
+                "price_difference_sum": None,
+                "is_detail": True,
+                "drill": ""
+            })
+    
+    return pd.DataFrame(expanded_rows)
+
+master_df = compute_master_with_details(filtered_icb, vmpp_df)
