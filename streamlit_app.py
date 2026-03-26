@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
-from data_loader import _bq_client
+from db import _bq_client
 
 import logging
 logging.basicConfig(level=logging.INFO)
