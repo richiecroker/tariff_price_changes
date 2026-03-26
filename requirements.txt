@@ -2,4 +2,10 @@ streamlit
 pandas
 streamlit-aggrid
 google-cloud-bigquery
+google-cloud-storage
+db-dtypes
+google-cloud-bigquery-storage
+pyyaml
 google-auth
+duckdb
+plotly
