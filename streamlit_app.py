@@ -120,6 +120,10 @@ def gbp2f(x):
     sign = "-" if x < 0 else ""
     return f"{sign}£{abs(x):,.2f}"
 
+
+st.write(icb_df.columns.tolist())
+st.write(icb_df["icb_name"].unique())
+
 # Top filter by ICB
 
 
@@ -132,7 +136,7 @@ with st.sidebar:
     st.markdown("### Select Integrated Care Board")
     selected_name = st.selectbox("Select Integrated Care Board", names, label_visibility="collapsed")
     
-    # NEW: Tariff Category Filter
+    # Tariff Category Filter
     tariff_cats = ["(All)"] + sorted(icb_df["tariff_cat"].dropna().unique().tolist())
     st.markdown("### Select Tariff Category")
     selected_tariff_cat = st.selectbox("Select Tariff Category", tariff_cats, label_visibility="collapsed")
