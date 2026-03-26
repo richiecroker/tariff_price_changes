@@ -7,6 +7,10 @@ import data_loader
 # Set wide layout
 st.set_page_config(layout="wide")
 
+st.image("OpenPrescribing.svg")
+
+st.info("##### Hello!  This is a **very** early prototype of calculating drug price changes. please let us know what you think, and what you'd like to see.  Email us at [bennett@phc.ox.ac.uk](mailto:bennett@phc.ox.ac.uk)")
+
 # Load data from SQL queries
 icb_data, vmpp_data = data_loader.get_fresh_data_if_needed()
 icb_df = pd.DataFrame(icb_data)
