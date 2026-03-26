@@ -14,6 +14,8 @@ st.info(
 Please let us know what you think, and what you'd like to see.  Email us at [bennett@phc.ox.ac.uk](mailto:bennett@phc.ox.ac.uk)"""
 )
 
+st.title("Drug Tariff price change estimator")
+
 # Load data from SQL queries
 icb_data, vmpp_data = data_loader.get_fresh_data_if_needed()
 icb_df = pd.DataFrame(icb_data)
@@ -55,7 +57,7 @@ def gbp2f(x):
 
 # Top filter by ICB
 
-st.header("Drug Tariff price change estimator", divider ="blue")
+
 
 st.markdown(f"### Drug Tariff month: {max_tariff_date}")
 st.markdown(f"### Prescribing data used for estimate: {max_rx_date}")
