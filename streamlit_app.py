@@ -134,7 +134,6 @@ with st.sidebar:
     names = ["(All)"] + sorted(icb_df["icb_name"].dropna().unique().tolist())
     st.markdown("### Select Integrated Care Board")
     selected_name = st.selectbox("Select Integrated Care Board", names, label_visibility="collapsed")
-    st.write(names)
     # Tariff Category Filter
     tariff_cats = ["(All)"] + sorted(icb_df["tariff_cat"].dropna().unique().tolist())
     st.markdown("### Select Tariff Category")
