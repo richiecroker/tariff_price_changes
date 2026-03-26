@@ -3,6 +3,8 @@ import pandas as pd
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
 import data_loader
 
+import logging
+logging.basicConfig(level=logging.INFO)
 
 # Set wide layout
 st.set_page_config(layout="wide")
