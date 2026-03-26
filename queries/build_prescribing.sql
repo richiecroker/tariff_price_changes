@@ -1,5 +1,5 @@
 SELECT
-  icb.name AS icb_name,
+  rx.practice,  
   rx.bnf_name,
   rx.bnf_code,
   SUM(rx.quantity) as quantity
@@ -11,4 +11,4 @@ INNER JOIN hscic.stps icb
 WHERE month = (SELECT MAX(month) FROM hscic.normalised_prescribing)
   AND ccgs.org_type = 'CCG'
   AND ccgs.close_date IS NULL
-GROUP BY icb.name, rx.bnf_name, rx.bnf_code
+GROUP BY rx.practice, rx.bnf_name, rx.bnf_code
