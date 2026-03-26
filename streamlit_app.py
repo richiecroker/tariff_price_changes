@@ -49,7 +49,10 @@ from db import _gcs_client, GCS_DB_PATH, BUCKET_NAME
 if st.button("Force rebuild"):
     client = _gcs_client()
     bucket = client.bucket(BUCKET_NAME)
-    bucket.blob(GCS_DB_PATH).delete()
+    try:
+        bucket.blob(GCS_DB_PATH).delete()
+    except Exception:
+        pass  # file doesn't exist in GCS, that's fine
     st.cache_resource.clear()
     st.success("Cache cleared, reload the app to rebuild")
 
