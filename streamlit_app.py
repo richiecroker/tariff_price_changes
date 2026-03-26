@@ -58,9 +58,9 @@ def gbp2f(x):
 # Top filter by ICB
 
 
-
-st.markdown(f"### Drug Tariff month: {max_tariff_date}")
-st.markdown(f"### Prescribing data used for estimate: {max_rx_date}")
+with st.sidebar:
+    st.markdown(f"### Drug Tariff month: {max_tariff_date}")
+    st.markdown(f"### Prescribing data used for estimate: {max_rx_date}")
 
 st.markdown (f"#### Total changes for {max_tariff_date}")
 
