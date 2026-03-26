@@ -177,7 +177,7 @@ with st.sidebar:
     sel_practices = st.multiselect("Practice", practice_opts, default=sel_practices, key="sel_practice")
     df_selected = df_pcn if not sel_practices else df_pcn[df_pcn["practice_name"].isin(sel_practices)]
 
-    selected_practice_codes = df_selected["practice_code"].unique().tolist(
+    selected_practice_codes = df_selected["practice_code"].unique().tolist()
 
 st.markdown (f"#### Total changes for {max_tariff_date}")
 
