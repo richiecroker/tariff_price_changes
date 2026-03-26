@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
-
+from datetime import datetime
 
 from db import get_duckdb_connection, get_latest_dates, _bq_client, _latest_bq_month
 
@@ -124,8 +124,8 @@ def gbp2f(x):
 
 
 with st.sidebar:
-    st.markdown(f"### Drug Tariff month: {max_tariff_date}")
-    st.markdown(f"### Prescribing data used for estimate: {max_rx_date}")
+    st.markdown(f"### Drug Tariff month: {datetime.strptime(max_tariff_date, '%Y-%m-%d').strftime('%B %Y')}")
+    st.markdown(f"### Prescribing data used for estimate: {datetime.strptime(max_rx_date, '%Y-%m-%d').strftime('%B %Y')}")
 
     # ICB Filter
     names = ["(All)"] + sorted(icb_df["icb_ame"].dropna().unique().tolist())
