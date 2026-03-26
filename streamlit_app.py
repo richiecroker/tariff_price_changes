@@ -3,6 +3,8 @@ import pandas as pd
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
 
 
+from db import get_duckdb_connection, get_latest_dates, _bq_client, _latest_bq_month
+
 import logging
 logging.basicConfig(level=logging.INFO)
 
@@ -50,7 +52,6 @@ if st.button("Force rebuild"):
     st.success("Cache cleared, reload the app to rebuild")
 
 
-from db import _bq_client, _latest_bq_month, get_duckdb_connection
 
 
 conn = get_duckdb_connection()

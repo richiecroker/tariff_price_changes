@@ -9,7 +9,6 @@ import streamlit as st
 from google.cloud import bigquery, storage
 from google.oauth2 import service_account
 
-from db import get_duckdb_connection, get_latest_dates
 
 logger = logging.getLogger(__name__)
 
