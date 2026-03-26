@@ -87,3 +87,30 @@ st.dataframe(vmpp_df)
 
 #raw_max_tariff_date = data_loader.get_cached_max_tariffdate()
 #max_tariff_date = pd.to_datetime(raw_max_tariff_date, errors="coerce").strftime("%B %Y")
+
+# calculate number of changes to vmpp
+
+price = pd.to_numeric(vmpp_df["price_pence"], errors="coerce")
+prev = pd.to_numeric(vmpp_df["previous_price_pence"], errors="coerce")
+
+num_increased = (price > prev).sum()
+num_decreased = (price < prev).sum()
+num_unchanged = (price == prev).sum()
+
+
+
+# GBP formatter (Python side)
+
+def gbp(x):
+    if pd.isna(x):
+        return ""
+    x = float(x)
+    sign = "-" if x < 0 else ""
+    return f"{sign}£{abs(x):,.0f}"
+
+def gbp2f(x):
+    if pd.isna(x):
+        return ""
+    x = float(x)
+    sign = "-" if x < 0 else ""
+    return f"{sign}£{abs(x):,.2f}"
