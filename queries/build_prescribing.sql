@@ -1,7 +1,8 @@
 SELECT
   icb.name,
   rx.bnf_name,
-  rx.bnf_code
+  rx.bnf_code,
+  SUM(rx.quantity) as quantity
 FROM hscic.normalised_prescribing rx
 INNER JOIN hscic.ccgs ccgs
   ON rx.pct = ccgs.code
