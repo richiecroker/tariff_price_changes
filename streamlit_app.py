@@ -54,7 +54,13 @@ if st.button("Force rebuild"):
     st.success("Cache cleared, reload the app to rebuild")
 
 
-
+if st.button("Test practices build"):
+    conn = get_duckdb_connection()
+    try:
+        df = conn.execute("SELECT * FROM practices LIMIT 5").df()
+        st.dataframe(df)
+    except Exception as e:
+        st.error(f"Error: {e}")
 
 conn = get_duckdb_connection()
 
