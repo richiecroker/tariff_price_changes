@@ -164,8 +164,8 @@ def get_duckdb_connection():
     return duckdb.connect(LOCAL_DB)
 
 
-    def get_latest_dates():
-        return {
-            "prescribing": _latest_bq_month("hscic.normalised_prescribing", "month"),
-        "   tariff": _latest_bq_month("dmd.tariffprice", "date")
-        }
+def get_latest_dates():
+    return {
+        "prescribing": _latest_bq_month("hscic.normalised_prescribing", "month"),
+        "tariff": _latest_bq_month("dmd.tariffprice", "date")
+    }
