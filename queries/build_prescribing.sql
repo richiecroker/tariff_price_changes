@@ -1,5 +1,5 @@
 SELECT
-  icb.name,
+  icb.name AS icb_name,
   rx.bnf_name,
   rx.bnf_code,
   SUM(rx.quantity) as quantity

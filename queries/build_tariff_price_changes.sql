@@ -45,7 +45,7 @@ tariff_map AS (
 
 agg_price_changes AS (
   SELECT
-    pc.date,
+    DATE(pc.date) as date,
     CAST(pc.vmpp AS STRING) AS vmpp,
     vf.bnf_code,
     pc.tariff_category,
