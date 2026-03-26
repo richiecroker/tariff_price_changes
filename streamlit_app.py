@@ -68,13 +68,11 @@ icb_df = conn.execute("""
     GROUP BY rx.icb_name, rx.bnf_name, rx.bnf_code, dt.tariff_cat
     """).df()
 
-st.dataframe(icb_df)
 
 vmpp_df = conn.execute("""
     SELECT * FROM vmpp_tariff_changes
     """).df()
 
-st.dataframe(vmpp_df)
 
 # Load data from SQL queries
 #icb_data, vmpp_data = data_loader.get_fresh_data_if_needed()
