@@ -33,8 +33,8 @@ icb_df = conn.execute("""
         rx.bnf_code,
         dt.tariff_cat,
         SUM(rx.quantity * dt.price_diff_pu * rx.is_max_price_diff_pu) AS price_difference
-    FROM prescribing
-    INNER JOIN tariff_price_changes dt
+    FROM prescribing AS rx
+    INNER JOIN tariff_price_changes AS dt
     ON rx.bnf_code = dt.bnf_code
     GROUP BY rx.name, rx.bnf_name, rx.bnf_code, dt.tariff_cat
     """).df()
