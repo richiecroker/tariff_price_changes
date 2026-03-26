@@ -20,3 +20,4 @@ INNER JOIN `hscic.regional_teams` AS region
 
 WHERE setting = 4
   AND practice.close_date IS NULL
+  
