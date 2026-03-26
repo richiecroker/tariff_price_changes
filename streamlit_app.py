@@ -88,7 +88,7 @@ vmpp_df = conn.execute("""
 
 dates = get_latest_dates()
 max_rx_date = dates["prescribing"]
-max_tariff  = dates["tariff"]
+max_tariff_date  = dates["tariff"]
 #raw_max_tariff_date = data_loader.get_cached_max_tariffdate()
 #max_tariff_date = pd.to_datetime(raw_max_tariff_date, errors="coerce").strftime("%B %Y")
 #max_tariff = conn.execute("SELECT MAX(date) FROM tariff_price_changes").fetchone()[0]
