@@ -112,3 +112,31 @@ def gbp2f(x):
     x = float(x)
     sign = "-" if x < 0 else ""
     return f"{sign}£{abs(x):,.2f}"
+
+# Top filter by ICB
+
+
+with st.sidebar:
+    st.markdown(f"### Drug Tariff month: {max_tariff_date}")
+    st.markdown(f"### Prescribing data used for estimate: {max_rx_date}")
+
+    # ICB Filter
+    names = ["(All)"] + sorted(icb_df["icb_ame"].dropna().unique().tolist())
+    st.markdown("### Select Integrated Care Board")
+    selected_name = st.selectbox("Select Integrated Care Board", names, label_visibility="collapsed")
+    
+    # NEW: Tariff Category Filter
+    tariff_cats = ["(All)"] + sorted(icb_df["tariff_cat"].dropna().unique().tolist())
+    st.markdown("### Select Tariff Category")
+    selected_tariff_cat = st.selectbox("Select Tariff Category", tariff_cats, label_visibility="collapsed")
+    
+    # Apply both filters
+    if selected_name != "(All)":
+        filtered_icb = icb_df[icb_df["icb_name"] == selected_name].copy()
+    else:
+        filtered_icb = icb_df.copy()
+    
+    if selected_tariff_cat != "(All)":
+        filtered_icb = filtered_icb[filtered_icb["tariff_cat"] == selected_tariff_cat].copy()
+
+st.markdown (f"#### Total changes for {max_tariff_date}")
