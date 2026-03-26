@@ -39,6 +39,8 @@ if st.button("Test table data"):
     st.dataframe(conn.execute("SELECT * FROM prescribing LIMIT 5").df())
     st.subheader("Tariff price changes")
     st.dataframe(conn.execute("SELECT * FROM tariff_price_changes LIMIT 5").df())
+    st.subheader("VMPP changes")
+        st.dataframe(conn.execute("SELECT * FROM vmpp_price_changes LIMIT 5").df())
 
 
 from db import _gcs_client, GCS_DB_PATH, BUCKET_NAME

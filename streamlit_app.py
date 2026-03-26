@@ -18,7 +18,36 @@ Please let us know what you think, and what you'd like to see.  Email us at [ben
 
 st.title("Drug Tariff price change estimator")
 
+from db import _bq_client, _latest_bq_month, get_duckdb_connection
 
+if st.button("Test DuckDB connection"):
+    try:
+        conn = get_duckdb_connection()
+        tables = [r[0] for r in conn.execute("SHOW TABLES").fetchall()]
+        st.success(f"DuckDB connected, tables: {tables}")
+    except Exception as e:
+        st.error(f"DuckDB connection failed: {e}")
+
+
+
+if st.button("Test table data"):
+    conn = get_duckdb_connection()
+    st.subheader("Prescribing")
+    st.dataframe(conn.execute("SELECT * FROM prescribing LIMIT 5").df())
+    st.subheader("Tariff price changes")
+    st.dataframe(conn.execute("SELECT * FROM tariff_price_changes LIMIT 5").df())
+    st.subheader("VMPP changes")
+        st.dataframe(conn.execute("SELECT * FROM vmpp_price_changes LIMIT 5").df())
+
+
+from db import _gcs_client, GCS_DB_PATH, BUCKET_NAME
+
+if st.button("Force rebuild"):
+    client = _gcs_client()
+    bucket = client.bucket(BUCKET_NAME)
+    bucket.blob(GCS_DB_PATH).delete()
+    st.cache_resource.clear()
+    st.success("Cache cleared, reload the app to rebuild")
 
 
 from db import _bq_client, _latest_bq_month, get_duckdb_connection
