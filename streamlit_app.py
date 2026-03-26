@@ -121,8 +121,7 @@ def gbp2f(x):
     return f"{sign}£{abs(x):,.2f}"
 
 
-st.write(icb_df.columns.tolist())
-st.write(icb_df["icb_name"].unique())
+st.write(names)
 
 # Top filter by ICB
 
