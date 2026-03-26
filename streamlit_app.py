@@ -7,7 +7,9 @@ import data_loader
 # Set wide layout
 st.set_page_config(layout="wide")
 
-st.image("OpenPrescribing.svg")
+_, right = st.columns([3, 1])
+with right:
+    st.image("OpenPrescribing.svg")
 
 st.info(
     """##### Hello!  This is a **very** early prototype of estimating the impact of drug tariff changes.  
