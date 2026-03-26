@@ -33,7 +33,12 @@ if st.button("Test DuckDB connection"):
 
 
 
-
+if st.button("Test table data"):
+    conn = get_duckdb_connection()
+    st.subheader("Prescribing")
+    st.dataframe(conn.execute("SELECT * FROM prescribing LIMIT 5").df())
+    st.subheader("Tariff price changes")
+    st.dataframe(conn.execute("SELECT * FROM tariff_price_changes LIMIT 5").df())
 
 
 
