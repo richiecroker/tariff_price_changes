@@ -23,33 +23,42 @@ st.title("Drug Tariff price change estimator")
 
 from db import _bq_client, _latest_bq_month, get_duckdb_connection
 
-if st.button("Test DuckDB connection"):
-    try:
-        conn = get_duckdb_connection()
-        tables = [r[0] for r in conn.execute("SHOW TABLES").fetchall()]
-        st.success(f"DuckDB connected, tables: {tables}")
-    except Exception as e:
-        st.error(f"DuckDB connection failed: {e}")
 
+conn = get_duckdb_connection()
 
+icb_df = conn.execute("""
+    SELECT
+        t.bnf_code,
+        t.nm,
+        t.tariff_cat,
+        t.price_diff_pu,
+        SUM(p.quantity * t.price_diff_pu * t.is_max_price_diff_pu) AS price_difference
+    FROM tariff_price_changes t
+    INNER JOIN prescribing p ON p.bnf_code = t.bnf_code
+    GROUP BY t.bnf_code, t.nm, t.tariff_cat, t.price_diff_pu
 
-if st.button("Test table data"):
-    conn = get_duckdb_connection()
-    st.subheader("Prescribing")
-    st.dataframe(conn.execute("SELECT * FROM prescribing LIMIT 5").df())
-    st.subheader("Tariff price changes")
-    st.dataframe(conn.execute("SELECT * FROM tariff_price_changes LIMIT 5").df())
+    SELECT
+        rx.name,
+        rx.bnf_name,
+        rx.bnf_code,
+        dt.tariff_cat,
+        SUM(quantity * bnf.price_diff_pu * is_max_price_diff_pu) AS price_difference
+    FROM prescribing
+    INNER JOIN tariff_price_changes dt
+    ON px.bnf_code = dt.bnf_code
+    GROUP BY rx.name, rx.bnf_name, rx.bnf_code, dt.tariff_cat
+    """).df()
 
+st.dataframe(icb_df)
 
-from db import _gcs_client, GCS_DB_PATH, BUCKET_NAME
+# Load data from SQL queries
+#icb_data, vmpp_data = data_loader.get_fresh_data_if_needed()
+#icb_df = pd.DataFrame(icb_data)
+#vmpp_df = pd.DataFrame(vmpp_data)
 
-if st.button("Force rebuild"):
-    client = _gcs_client()
-    bucket = client.bucket(BUCKET_NAME)
-    bucket.blob(GCS_DB_PATH).delete()
-    st.cache_resource.clear()
-    st.success("Cache cleared, reload the app to rebuild")
+# Get latest dates
+#raw_max_rx_date = data_loader.get_cached_max_rxdate()
+#max_rx_date = pd.to_datetime(raw_max_rx_date, errors="coerce").strftime("%B %Y")
 
-
-
-
+#raw_max_tariff_date = data_loader.get_cached_max_tariffdate()
+#max_tariff_date = pd.to_datetime(raw_max_tariff_date, errors="coerce").strftime("%B %Y")
