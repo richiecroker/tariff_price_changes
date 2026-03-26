@@ -18,6 +18,70 @@ Please let us know what you think, and what you'd like to see.  Email us at [ben
 
 st.title("Drug Tariff price change estimator")
 
+
+
+
+
+import streamlit as st
+from data_loader import _bq_client
+
+st.title("Connection Test")
+
+if st.button("Test BQ Connection"):
+    try:
+        bq = _bq_client()
+        result = bq.query("SELECT 1").result()
+        st.success("BQ connection OK")
+    except Exception as e:
+        st.error(f"BQ connection failed: {e}")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # Load data from SQL queries
 icb_data, vmpp_data = data_loader.get_fresh_data_if_needed()
 icb_df = pd.DataFrame(icb_data)
