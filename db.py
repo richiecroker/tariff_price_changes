@@ -166,7 +166,7 @@ def get_duckdb_connection():
     _save_db_to_gcs(bucket)
     return duckdb.connect(LOCAL_DB)
 
-
+@st.cache_resource
 def get_latest_dates():
     return {
         "prescribing": _latest_bq_month("hscic.normalised_prescribing", "month"),
