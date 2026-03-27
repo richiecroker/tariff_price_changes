@@ -18,7 +18,6 @@ st.info(
 Please let us know what you think, and what you'd like to see.  Email us at [bennett@phc.ox.ac.uk](mailto:bennett@phc.ox.ac.uk)"""
 )
 
-
 conn = get_duckdb_connection()
 
 icb_df = conn.execute("""
@@ -42,7 +41,7 @@ vmpp_df = conn.execute("""
     SELECT * FROM vmpp_tariff_changes
     """).df()
 
-st.write(vmpp_df.columns.tolist())
+
 dates = get_latest_dates()
 max_rx_date = dates["prescribing"]
 max_tariff_date  = dates["tariff"]
@@ -112,7 +111,7 @@ with st.sidebar:
 
     selected_practice_codes = df_selected["practice_code"].unique().tolist()
 
-st.markdown (f"#### Total changes for {max_tariff_date}")
+st.markdown (f"#### Total changes for {datetime.strptime(max_rx_date, '%Y-%m-%d').strftime('%B %Y')}")
 
 # Coerce prices to numeric
 price = pd.to_numeric(vmpp_df["price_pence"], errors="coerce")
