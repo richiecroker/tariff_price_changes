@@ -122,11 +122,6 @@ practices_df = load_practices_df(conn)
 tariff_cat_opts = load_tariff_categories(conn)
 
 dates = get_latest_dates()
-st.write("DEBUG dates:", dates)
-conn2 = get_duckdb_connection()
-st.write("DEBUG tables:", conn2.execute("SHOW TABLES").fetchall())
-st.write("DEBUG prescribing cols:", conn2.execute("DESCRIBE prescribing").fetchall())
-
 max_rx_date = dates["prescribing"]
 max_tariff_date = dates["tariff"]
 
