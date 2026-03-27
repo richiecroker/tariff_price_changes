@@ -154,8 +154,8 @@ filtered_df = conn.execute("""
 
 conn.unregister("selected_practices")
 
-if sel_tariff_cat != "(All)":
-    filtered_df = filtered_df[filtered_df["tariff_cat"] == sel_tariff_cat]
+if sel_tariff_cat:
+    filtered_df = filtered_df[filtered_df["tariff_cat"].isin(sel_tariff_cat)]
 
 # Calculate and display total price change
 total_difference = filtered_df["price_difference"].sum()
