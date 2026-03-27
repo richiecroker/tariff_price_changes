@@ -20,6 +20,7 @@ Please let us know what you think, and what you'd like to see.  Email us at [ben
 
 st.title("Drug Tariff price change estimator")
 
+conn = get_duckdb_connection()
 
 vmpp_df = conn.execute("""
     SELECT * FROM vmpp_tariff_changes
