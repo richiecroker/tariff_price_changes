@@ -20,69 +20,6 @@ Please let us know what you think, and what you'd like to see.  Email us at [ben
 
 st.title("Drug Tariff price change estimator")
 
-from db import _bq_client, _latest_bq_month, get_duckdb_connection
-
-if st.button("Test DuckDB connection"):
-    try:
-        conn = get_duckdb_connection()
-        tables = [r[0] for r in conn.execute("SHOW TABLES").fetchall()]
-        st.success(f"DuckDB connected, tables: {tables}")
-    except Exception as e:
-        st.error(f"DuckDB connection failed: {e}")
-
-
-
-if st.button("Test table data"):
-    conn = get_duckdb_connection()
-    st.subheader("Prescribing")
-    st.dataframe(conn.execute("SELECT * FROM prescribing LIMIT 5").df())
-    st.subheader("Tariff price changes")
-    st.dataframe(conn.execute("SELECT * FROM tariff_price_changes LIMIT 5").df())
-    st.subheader("VMPP changes")
-    st.dataframe(conn.execute("SELECT * FROM vmpp_tariff_changes LIMIT 5").df())
-    st.subheader("practices")
-    st.dataframe(conn.execute("SELECT * FROM practices LIMIT 5").df())
-
-
-from db import _gcs_client, GCS_DB_PATH, BUCKET_NAME
-
-if st.button("Force rebuild"):
-    client = _gcs_client()
-    bucket = client.bucket(BUCKET_NAME)
-    try:
-        bucket.blob(GCS_DB_PATH).delete()
-    except Exception:
-        pass  # file doesn't exist in GCS, that's fine
-    st.cache_resource.clear()
-    st.success("Cache cleared, reload the app to rebuild")
-
-
-if st.button("Test practices build"):
-    conn = get_duckdb_connection()
-    try:
-        df = conn.execute("SELECT * FROM practices LIMIT 5").df()
-        st.dataframe(df)
-    except Exception as e:
-        st.error(f"Error: {e}")
-
-conn = get_duckdb_connection()
-
-icb_df = conn.execute("""
-    SELECT
-        prac.icb_name,
-        rx.bnf_name,
-        rx.bnf_code,
-        dt.tariff_cat,
-        SUM(rx.quantity * dt.price_diff_pu * dt.is_max_price_diff_pu) AS price_difference
-    FROM prescribing AS rx
-    INNER JOIN tariff_price_changes AS dt
-    ON rx.bnf_code = dt.bnf_code
-    INNER JOIN practices AS prac
-    ON
-    rx.practice = prac.practice_code
-    GROUP BY prac.icb_name, rx.bnf_name, rx.bnf_code, dt.tariff_cat
-    """).df()
-
 
 vmpp_df = conn.execute("""
     SELECT * FROM vmpp_tariff_changes
@@ -92,9 +29,6 @@ st.write(vmpp_df.columns.tolist())
 dates = get_latest_dates()
 max_rx_date = dates["prescribing"]
 max_tariff_date  = dates["tariff"]
-#raw_max_tariff_date = data_loader.get_cached_max_tariffdate()
-#max_tariff_date = pd.to_datetime(raw_max_tariff_date, errors="coerce").strftime("%B %Y")
-#max_tariff = conn.execute("SELECT MAX(date) FROM tariff_price_changes").fetchone()[0]
 
 # calculate number of changes to vmpp
 
@@ -104,7 +38,6 @@ prev = pd.to_numeric(vmpp_df["previous_price_pence"], errors="coerce")
 num_increased = (price > prev).sum()
 num_decreased = (price < prev).sum()
 num_unchanged = (price == prev).sum()
-
 
 
 # GBP formatter (Python side)
@@ -122,8 +55,6 @@ def gbp2f(x):
     x = float(x)
     sign = "-" if x < 0 else ""
     return f"{sign}£{abs(x):,.2f}"
-
-
 
 
 # Top filter by ICB
@@ -190,10 +121,6 @@ for _, row in summary.iterrows():
     c1.write(f"Increases: {row.get('increase', 0)}")
     c2.write(f"Decreases: {row.get('decrease', 0)}")
     c3.write(f"No change: {row.get('unchanged', 0)}")
-
-
-
-
 
 
 conn.register("selected_practices", df_selected)
