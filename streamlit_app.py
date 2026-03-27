@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime
 import yaml
 import os
-from db import get_duckdb_connection, get_latest_dates, _bq_client, _latest_bq_month
+from db import get_duckdb_connection, get_latest_dates
 
 # ── Page config — must be first Streamlit command ─────────────────────────────
 
