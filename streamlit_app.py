@@ -1,23 +1,34 @@
 import streamlit as st
 import pandas as pd
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
-import data_loader
+from datetime import datetime
+import yaml
 
+from db import get_duckdb_connection, get_latest_dates, _bq_client, _latest_bq_month
+
+import logging
+logging.basicConfig(level=logging.INFO)
 
 # Set wide layout
 st.set_page_config(layout="wide")
 
-# Load data from SQL queries
-icb_data, vmpp_data = data_loader.get_fresh_data_if_needed()
-icb_df = pd.DataFrame(icb_data)
-vmpp_df = pd.DataFrame(vmpp_data)
+st.image("OpenPrescribing.svg")
 
-# Get latest dates
-raw_max_rx_date = data_loader.get_cached_max_rxdate()
-max_rx_date = pd.to_datetime(raw_max_rx_date, errors="coerce").strftime("%B %Y")
+st.info(
+    """##### Hello!  This is a **very** early prototype of estimating the impact of drug tariff changes.  
+Please let us know what you think, and what you'd like to see.  Email us at [bennett@phc.ox.ac.uk](mailto:bennett@phc.ox.ac.uk)"""
+)
 
-raw_max_tariff_date = data_loader.get_cached_max_tariffdate()
-max_tariff_date = pd.to_datetime(raw_max_tariff_date, errors="coerce").strftime("%B %Y")
+conn = get_duckdb_connection()
+
+vmpp_df = conn.execute("""
+    SELECT * FROM vmpp_tariff_changes
+    """).df()
+
+
+dates = get_latest_dates()
+max_rx_date = dates["prescribing"]
+max_tariff_date  = dates["tariff"]
 
 # calculate number of changes to vmpp
 
@@ -46,14 +57,52 @@ def gbp2f(x):
     sign = "-" if x < 0 else ""
     return f"{sign}£{abs(x):,.2f}"
 
+
+
+
 # Top filter by ICB
 
-st.header("Drug Tariff price change estimator", divider ="blue")
+practices_df = conn.execute("SELECT * FROM practices").df()
+with st.sidebar:
+    st.markdown(f"### Drug Tariff month: {datetime.strptime(max_tariff_date, '%Y-%m-%d').strftime('%B %Y')}")
+    st.markdown(f"### Prescribing data used for estimate: {datetime.strptime(max_rx_date, '%Y-%m-%d').strftime('%B %Y')}")
 
-st.markdown(f"### Drug Tariff month: {max_tariff_date}")
-st.markdown(f"### Prescribing data used for estimate: {max_rx_date}")
+    st.header("Filters")
+    st.info("Select an organisation at any level.")
+    
+    region_opts = sorted(practices_df["region_name"].dropna().unique().tolist())
+    sel_regions = [v for v in st.session_state.get("sel_region", []) if v in region_opts]
+    sel_regions = st.multiselect("Region", region_opts, default=sel_regions, key="sel_region")
+    df_region = practices_df if not sel_regions else practices_df[practices_df["region_name"].isin(sel_regions)]
 
-st.markdown (f"#### Total changes for {max_tariff_date}")
+    icb_opts = sorted(df_region["icb_name"].dropna().unique().tolist())
+    sel_icbs = [v for v in st.session_state.get("sel_icb", []) if v in icb_opts]
+    sel_icbs = st.multiselect("ICB", icb_opts, default=sel_icbs, key="sel_icb")
+    df_icb = df_region if not sel_icbs else df_region[df_region["icb_name"].isin(sel_icbs)]
+
+    pcn_opts = sorted(df_icb["pcn_name"].dropna().unique().tolist())
+    sel_pcns = [v for v in st.session_state.get("sel_pcn", []) if v in pcn_opts]
+    sel_pcns = st.multiselect("PCN", pcn_opts, default=sel_pcns, key="sel_pcn")
+    df_pcn = df_icb if not sel_pcns else df_icb[df_icb["pcn_name"].isin(sel_pcns)]
+
+    practice_opts = sorted(df_pcn["practice_name"].dropna().unique().tolist())
+    sel_practices = [v for v in st.session_state.get("sel_practice", []) if v in practice_opts]
+    sel_practices = st.multiselect("Practice", practice_opts, default=sel_practices, key="sel_practice")
+    df_selected = df_pcn if not sel_practices else df_pcn[df_pcn["practice_name"].isin(sel_practices)]
+
+    selected_practice_codes = df_selected["practice_code"].unique().tolist()
+
+    st.header("Further Filters")
+    tariff_cat_opts = ["(All)"] + sorted(conn.execute("SELECT DISTINCT tariff_cat FROM tariff_price_changes ORDER BY tariff_cat").df()["tariff_cat"].dropna().tolist())
+    sel_tariff_cat = st.selectbox("DT Category", tariff_cat_opts, key="sel_tariff_cat")
+
+    sort_option = st.radio(
+        "Sort by",
+        ["Largest Increases", "Largest Reductions"],
+        key="sort_option"
+    )
+
+st.markdown (f"#### Total changes for {datetime.strptime(max_tariff_date, '%Y-%m-%d').strftime('%B %Y')}")
 
 # Coerce prices to numeric
 price = pd.to_numeric(vmpp_df["price_pence"], errors="coerce")
@@ -87,237 +136,91 @@ for _, row in summary.iterrows():
     c3.write(f"No change: {row.get('unchanged', 0)}")
 
 
+conn.register("selected_practices", df_selected)
 
-# ICB Filter
-names = ["(All)"] + sorted(icb_df["name"].dropna().unique().tolist())
-st.markdown("### Select Integrated Care Board")
-selected_name = st.selectbox("Select Integrated Care Board", names, label_visibility="collapsed")
 
-# NEW: Tariff Category Filter
-tariff_cats = ["(All)"] + sorted(icb_df["tariff_cat"].dropna().unique().tolist())
-st.markdown("### Select Tariff Category")
-selected_tariff_cat = st.selectbox("Select Tariff Category", tariff_cats, label_visibility="collapsed")
+filtered_df = conn.execute("""
+    SELECT
+        rx.bnf_name,
+        rx.bnf_code,
+        dt.tariff_cat,
+        SUM(rx.quantity * dt.price_diff_pu * dt.is_max_price_diff_pu) AS price_difference
+    FROM prescribing AS rx
+    INNER JOIN tariff_price_changes AS dt
+    ON rx.bnf_code = dt.bnf_code
+    INNER JOIN selected_practices sp ON rx.practice = sp.practice_code
+    GROUP BY rx.bnf_name, rx.bnf_code, dt.tariff_cat
+    """).df()
 
-# Apply both filters
-if selected_name != "(All)":
-    filtered_icb = icb_df[icb_df["name"] == selected_name].copy()
-else:
-    filtered_icb = icb_df.copy()
+conn.unregister("selected_practices")
 
-if selected_tariff_cat != "(All)":
-    filtered_icb = filtered_icb[filtered_icb["tariff_cat"] == selected_tariff_cat].copy()
-
-# Calculate and display total price change
-total_difference = pd.to_numeric(filtered_icb["price_difference"], errors="coerce").fillna(0).sum()
-st.markdown(f"### Total estimated monthly price difference: {gbp(total_difference)}")
+if sel_tariff_cat != "(All)":
+    filtered_df = filtered_df[filtered_df["tariff_cat"] == sel_tariff_cat]
 
 # Calculate and display total price change
-total_difference = pd.to_numeric(filtered_icb["price_difference"], errors="coerce").fillna(0).sum()
+total_difference = filtered_df["price_difference"].sum()
+
+
+
+
 st.markdown(f"### Total estimated monthly price difference: {gbp(total_difference)}")
 
-# =======.======================
-# Master aggregation with details
-# =============================
-@st.cache_data
-def compute_master_with_details(icb_df: pd.DataFrame, vmpp_df: pd.DataFrame):
-    icb_df = icb_df.copy()
-    icb_df["price_difference"] = pd.to_numeric(
-        icb_df["price_difference"], errors="coerce"
-    ).fillna(0)
-
-    master = (
-        icb_df.groupby(["bnf_name", "bnf_code"], as_index=False)
-          .agg(price_difference_sum=("price_difference", "sum"))
-          .sort_values("price_difference_sum", ascending=True)
-          .reset_index(drop=True)
-    )
-
-    # Add VMPP details for each BNF code
-    expanded_rows = []
-    for _, row in master.iterrows():
-        # Add main row
-        expanded_rows.append({
-            "bnf_name": row["bnf_name"],
-            "bnf_code": row["bnf_code"],
-            "price_difference_sum": row["price_difference_sum"],
-            "is_detail": False,
-            "drill": ""
-        })
-        
-        # Add detail rows (hidden by default)
-        details = vmpp_df[vmpp_df["bnf_code"] == row["bnf_code"]].copy()
-        for _, detail in details.iterrows():
-            expanded_rows.append({
-                "bnf_name": f"  → {detail.get('nm', '')}",
-                "bnf_code": row["bnf_code"],
-                "price_difference_sum": None,
-                "is_detail": True,
-                "drill": ""
-            })
-    
-    return pd.DataFrame(expanded_rows)
-
-master_df = compute_master_with_details(filtered_icb, vmpp_df)
-
-# =============================
-# Top 10 Reductions and Increases
-# =============================
-# Get only the master rows (not detail rows)
-master_only = master_df[master_df["is_detail"] == False].copy()
-
-# Top 10 reductions (most negative values)
-top_reductions = master_only.nsmallest(10, "price_difference_sum")[["bnf_name", "price_difference_sum"]].copy()
-top_reductions.columns = ["BNF Name", "Price Difference"]
-
-# Top 10 increases (most positive values)
-top_increases = master_only.nlargest(10, "price_difference_sum")[["bnf_name", "price_difference_sum"]].copy()
-top_increases.columns = ["BNF Name", "Price Difference"]
-
-# Display side by side
-col1, col2 = st.columns(2)
-
-with col1:
-    st.subheader("Top 10 estimated cost reductions")
-    st.dataframe(
-        top_reductions.style.format({"Price Difference": gbp}),
-        hide_index=True,
-        use_container_width=True
-    )
-
-with col2:
-    st.subheader("Top 10 estimated cost increases")
-    st.dataframe(
-        top_increases.style.format({"Price Difference": gbp}),
-        hide_index=True,
-        use_container_width=True
-    )
+st.markdown ("### Breakdown by presentation")
 
 
-# Price formatter for AgGrid
-
-price_formatter = JsCode("""
-function(params) {
-    if (params.value == null || params.value === undefined) return '';
-    const v = Number(params.value);
-    if (isNaN(v)) return '';
-    const sign = v < 0 ? '-' : '';
-    const abs = Math.abs(v).toLocaleString('en-GB', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-    });
-    return sign + '£' + abs;
+st.info("ℹ️ To see details on changes to individual packs, click on the arrow")
+st.markdown("""
+<style>
+details {
+    border: none !important;
+    box-shadow: none !important;
 }
-""")
+</style>
+""", unsafe_allow_html=True)
 
-# Build Master Grid with master-detail
-# =============================
-st.subheader("Estimated cost difference per presentation", divider="blue")
-st.markdown("Click on product to see tariff details")
+if "page" not in st.session_state:
+    st.session_state.page = 0
 
-# Add search box for BNF name
-search_term = st.text_input("Search BNF name", placeholder="Type to search...")
-
-# Filter master_df based on search
-if search_term:
-    display_master_df = master_df[
-        master_df["bnf_name"].str.contains(search_term, case=False, na=False)
-    ].copy()
+if sort_option == "Largest Increases":
+    sorted_df = filtered_df.sort_values("price_difference", ascending=False)
 else:
-    display_master_df = master_df.copy()
+    sorted_df = filtered_df.sort_values("price_difference", ascending=True)
 
-gb = GridOptionsBuilder.from_dataframe(display_master_df)
+total_pages = max(1, (len(sorted_df) - 1) // 20 + 1)
+page = st.session_state.page
+page20 = sorted_df.iloc[page * 20:(page + 1) * 20]
 
-gb.configure_column("bnf_name", header_name="BNF name", sortable=True, flex=2)
-gb.configure_column(
-    "price_difference_sum",
-    header_name="Est cost difference",
-    sortable=True,
-    type=["numericColumn"],
-    valueFormatter=price_formatter,
-    flex=1,
-    cellStyle=JsCode("""
-        function(p) {
-            if (p.value == null) return {};
-            if (p.value < 0) return {color: 'green'};
-            if (p.value > 0) return {color: 'red'};
-            return {};
-        }
-    """)
-)
+for _, row in page20.iterrows():
+    colour = "red" if row["price_difference"] > 0 else "green"
+    label = f":{colour}[{row['bnf_name']}: {gbp2f(row['price_difference'])}]"
+    vmpp_details = vmpp_df[vmpp_df["bnf_code"] == row["bnf_code"]].copy()
+    with st.expander(label):
+        display_df = vmpp_details[["nm", "price_pence", "previous_price_pence", "tariff_category"]].copy()
+        display_df["price_pence"] = (pd.to_numeric(display_df["price_pence"], errors="coerce") / 100).apply(gbp2f)
+        display_df["previous_price_pence"] = (pd.to_numeric(display_df["previous_price_pence"], errors="coerce") / 100).apply(gbp2f)
+        display_df.columns = ["Name", "Price", "Previous Price", "DT Category"]
+        st.dataframe(display_df, hide_index=True, use_container_width=True)
 
-gb.configure_column("bnf_code", hide=True)
-gb.configure_column("is_detail", hide=True)
-gb.configure_column("drill", hide=True)
+col_prev, col_info, col_next = st.columns([1, 2, 1])
+with col_prev:
+    if st.button("← Previous", disabled=page == 0):
+        st.session_state.page -= 1
+        st.rerun()
+with col_info:
+    st.markdown(f"<div style='text-align:center'>Page {page + 1} of {total_pages}</div>", unsafe_allow_html=True)
+with col_next:
+    if st.button("Next →", disabled=page >= total_pages - 1):
+        st.session_state.page += 1
+        st.rerun()
 
-# Configure pagination
-gb.configure_pagination(paginationAutoPageSize=False, paginationPageSize=30)
+# ── Changelog ─────────────────────────────────────────────────────────────────
 
-# Hide detail rows by default
-gb.configure_grid_options(
-    isExternalFilterPresent=JsCode("function() { return true; }"),
-    doesExternalFilterPass=JsCode("""
-        function(node) {
-            return !node.data.is_detail;
-        }
-    """)
-)
+st.divider()
 
-gb.configure_selection("single", use_checkbox=False)
-grid_opts = gb.build()
+st.subheader("Changelog")
+with open("changelog.yaml") as f:
+    changelog = yaml.safe_load(f)
 
-grid_response = AgGrid(
-    display_master_df,
-    gridOptions=grid_opts,
-    update_mode=GridUpdateMode.SELECTION_CHANGED,
-    allow_unsafe_jscode=True,
-    fit_columns_on_grid_load=True,
-    height=420,
-    theme='streamlit'
-)
-
-# Show details below when selected
-
-selected = grid_response.get("selected_rows")
-
-if selected is None:
-    selected = []
-elif isinstance(selected, pd.DataFrame):
-    selected = selected.to_dict('records')
-elif not isinstance(selected, list):
-    selected = []
-
-if len(selected) > 0:
-    sel = selected[0]
-    bnf_code = sel.get("bnf_code")
-    bnf_name = sel.get("bnf_name")
-    
-    if bnf_code and not sel.get("is_detail"):
-        # Get VMPP details
-        details_df = vmpp_df[vmpp_df["bnf_code"] == bnf_code].copy()
-        
-        if not details_df.empty:
-            details_df["price"] = pd.to_numeric(details_df["price_pence"], errors="coerce") / 100
-            details_df["previous_price"] = pd.to_numeric(details_df["previous_price_pence"], errors="coerce") / 100
-            
-            st.subheader(f"Drug Tariff details for {bnf_name}", divider="blue")
-            
-            display_df = details_df[["nm", "price", "previous_price", "tariff_category"]].copy()
-            display_df.columns = ["Name", "Price", "Previous Price", "Tariff Category"]
-            
-            st.dataframe(
-                display_df.style.format({
-                    "Price": gbp2f,
-                    "Previous Price": gbp2f
-                }),
-                hide_index=True,
-                use_container_width=True
-            )
-
-# Add download button for full dataset
-csv_data = master_df[master_df["is_detail"] == False][["bnf_name", "bnf_code", "price_difference_sum"]].to_csv(index=False)
-st.download_button(
-    "Download full table as CSV",
-    csv_data,
-    file_name=f"bnf_prices_{selected_name.replace(' ', '_')}.csv",
-    mime="text/csv"
-)
+with st.expander("Click to see changelog"):
+    for entry in reversed(changelog):
+        st.markdown(f"**{entry['date']}** — {entry['change']} *({entry['person']})*")

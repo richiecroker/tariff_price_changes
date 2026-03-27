@@ -1,12 +1,12 @@
 SELECT
-  date,
+  DATE(date) as date,
   bnf_code,
   nm,
   vmpp,
   tariff_category,
   price_pence,
   prev_price AS previous_price_pence,
-  prev_date AS previous_date,
+  DATE(prev_date) AS previous_date,
   prev_tariff_category
 FROM (
   SELECT
