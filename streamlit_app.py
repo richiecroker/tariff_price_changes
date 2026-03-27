@@ -102,9 +102,7 @@ with st.sidebar:
     )
 
 st.markdown (f"#### Total changes for {datetime.strptime(max_tariff_date, '%Y-%m-%d').strftime('%B %Y')}")
-st.markdown ("### Breakdown by presentation")
 
-st.info("ℹ️ To see details on changes to individual packs, click on the arrow")
 # Coerce prices to numeric
 price = pd.to_numeric(vmpp_df["price_pence"], errors="coerce")
 prev = pd.to_numeric(vmpp_df["previous_price_pence"], errors="coerce")
@@ -160,8 +158,16 @@ if sel_tariff_cat != "(All)":
 
 # Calculate and display total price change
 total_difference = filtered_df["price_difference"].sum()
+
+
+
+
 st.markdown(f"### Total estimated monthly price difference: {gbp(total_difference)}")
 
+st.markdown ("### Breakdown by presentation")
+
+
+st.info("ℹ️ To see details on changes to individual packs, click on the arrow")
 st.markdown("""
 <style>
 details {
