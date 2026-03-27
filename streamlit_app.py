@@ -12,7 +12,7 @@ logging.basicConfig(level=logging.INFO)
 # Set wide layout
 st.set_page_config(layout="wide")
 
-st.image("OpenPrescribing.svg")
+st.image("content/OpenPrescribing.svg")
 
 st.info(
     """##### Hello!  This is a **very** early prototype of estimating the impact of drug tariff changes.  
@@ -220,10 +220,10 @@ with col_next:
 st.divider()
 
 with st.expander("Click here to read our methodology", icon=":material/quick_reference:"):
-    with open("methodology.md") as f:
+    with open("content/methodology.md") as f:
         st.markdown(f.read())
 
-with open("changelog.yaml") as f:
+with open("content/changelog.yaml") as f:
     changelog = yaml.safe_load(f)
 
 with st.expander("Click to see changelog", icon=":material/history:"):
