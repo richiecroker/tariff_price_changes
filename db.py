@@ -38,19 +38,33 @@ def _bq_client():
 
 # --- Helper functions ---
 
+def _latest_bq_month(table: str, date_col: str) -> str | None:
+    bq = _bq_client()
+    try:
+        result = bq.query(f"SELECT DATE(MAX({date_col})) FROM `{table}`").result()
+        row = list(result)[0]
+        return str(row[0]) if row[0] else None
+    except Exception as e:
+        st.error(f"Failed to get latest {date_col} from {table}: {e}")
+        return None
+
 def _latest_bq_dates() -> dict:
     """Fetch latest prescribing and tariff dates from BigQuery in a single query."""
     bq = _bq_client()
-    result = bq.query("""
-        SELECT
-            (SELECT DATE(MAX(month)) FROM `hscic.normalised_prescribing`) AS prescribing,
-            (SELECT DATE(MAX(date))  FROM `dmd.tariffprice`)              AS tariff
-    """).result()
-    row = list(result)[0]
-    return {
-        "prescribing": str(row.prescribing) if row.prescribing else None,
-        "tariff":      str(row.tariff)       if row.tariff      else None,
-    }
+    try:
+        result = bq.query("""
+            SELECT
+                (SELECT DATE(MAX(month)) FROM `measures.global_data_lpzomnibus`) AS prescribing,
+                (SELECT DATE(MAX(date))  FROM `dmd.tariffprice`)              AS tariff
+        """).result()
+        row = list(result)[0]
+        return {
+            "prescribing": str(row.prescribing) if row.prescribing else None,
+            "tariff":      str(row.tariff)       if row.tariff      else None,
+        }
+    except Exception as e:
+        st.error(f"Failed to fetch latest dates from BigQuery: {e}")
+        return {"prescribing": None, "tariff": None}
 
 def _cached_month_for_table(conn, table_name: str, date_col: str) -> str | None:
     try:
@@ -152,7 +166,6 @@ def get_duckdb_connection():
 
 @st.cache_resource
 def get_latest_dates():
-    """Read latest dates from DuckDB — no extra BigQuery calls."""
     conn = get_duckdb_connection()
     return {
         "prescribing": _cached_month_for_table(conn, "prescribing", "month"),

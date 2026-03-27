@@ -11,10 +11,6 @@ st.set_page_config(layout="wide")
 
 # ── Cached data loaders ────────────────────────────────────────────────────────
 
-@st.cache_resource
-def load_connection():
-    return get_duckdb_connection()
-
 @st.cache_data
 def load_vmpp_df(_conn):
     return _conn.execute("SELECT * FROM vmpp_tariff_changes").df()
@@ -120,7 +116,7 @@ def render_pagination(sorted_df):
 # ── App ────────────────────────────────────────────────────────────────────────
 
 # --- Load data ---
-conn = load_connection()
+conn = get_duckdb_connection()
 vmpp_df = load_vmpp_df(conn)
 practices_df = load_practices_df(conn)
 tariff_cat_opts = load_tariff_categories(conn)
