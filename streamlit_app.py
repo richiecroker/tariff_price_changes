@@ -222,8 +222,6 @@ st.markdown(f"### Total estimated monthly price difference: {gbp(total_differenc
 conn.register("selected_practices", df_selected)
 
 
-
-st.dataframe(filtered_df)
 filtered_df = conn.execute("""
     SELECT
         rx.bnf_name,
@@ -238,7 +236,7 @@ filtered_df = conn.execute("""
     """).df()
 
 conn.unregister("selected_practices")
-
+st.dataframe(filtered_df)
 
 
 
