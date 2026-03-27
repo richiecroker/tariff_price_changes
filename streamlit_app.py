@@ -218,6 +218,31 @@ for _, row in summary.iterrows():
 total_difference = pd.to_numeric(filtered_icb["price_difference"], errors="coerce").fillna(0).sum()
 st.markdown(f"### Total estimated monthly price difference: {gbp(total_difference)}")
 
+
+conn.register("selected_practices", df_selected)
+
+
+
+st.dataframe(filtered_df)
+filtered_df = conn.execute("""
+    SELECT
+        rx.bnf_name,
+        rx.bnf_code,
+        dt.tariff_cat,
+        SUM(rx.quantity * dt.price_diff_pu * dt.is_max_price_diff_pu) AS price_difference
+    FROM prescribing AS rx
+    INNER JOIN tariff_price_changes AS dt
+    ON rx.bnf_code = dt.bnf_code
+    INNER JOIN selected_practices sp ON p.practice_code = sp.practice_code
+    GROUP BY rx.bnf_name, rx.bnf_code, dt.tariff_cat
+    """).df()
+
+conn.unregister("selected_practices")
+
+
+
+
+
 # =======.======================
 # Master aggregation with details
 # =============================
