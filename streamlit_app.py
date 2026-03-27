@@ -1,21 +1,14 @@
 import streamlit as st
 import pandas as pd
-from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
 from datetime import datetime
 import yaml
 import os
 
 from db import get_duckdb_connection, get_latest_dates, _bq_client, _latest_bq_month
 
-import logging
-logging.basicConfig(level=logging.INFO)
-
-base_dir = os.path.dirname(__file__)
-
 # Set wide layout
 st.set_page_config(layout="wide")
 
-st.image("content/OpenPrescribing.svg")
 st.image("content/OpenPrescribing.svg")
 st.info(
     """##### Hello!  This is a **very** early prototype of estimating the impact of drug tariff changes.  
