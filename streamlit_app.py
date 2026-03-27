@@ -219,10 +219,13 @@ with col_next:
 
 st.divider()
 
-st.subheader("Changelog")
+with st.expander("Click here to read our methodology", icon=":material/quick_reference:"):
+    with open("methodology.md") as f:
+        st.markdown(f.read())
+
 with open("changelog.yaml") as f:
     changelog = yaml.safe_load(f)
 
-with st.expander("Click to see changelog"):
+with st.expander("Click to see changelog", icon=":material/history:"):
     for entry in reversed(changelog):
         st.markdown(f"**{entry['date']}** — {entry['change']} *({entry['person']})*")

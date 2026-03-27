@@ -9,3 +9,7 @@
 - date: 2026-03-27
   change: Fixed page issue when filtering
   person: Richard Croker
+
+- date: 2026-03-27
+  change: Add methodology expander
+  person: Richard Croker
