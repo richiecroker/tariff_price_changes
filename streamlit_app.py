@@ -214,9 +214,7 @@ for _, row in summary.iterrows():
 
 
 
-# Calculate and display total price change
-total_difference = pd.to_numeric(filtered_icb["price_difference"], errors="coerce").fillna(0).sum()
-st.markdown(f"### Total estimated monthly price difference: {gbp(total_difference)}")
+
 
 
 conn.register("selected_practices", df_selected)
@@ -238,7 +236,9 @@ filtered_df = conn.execute("""
 conn.unregister("selected_practices")
 st.dataframe(filtered_df)
 
-
+# Calculate and display total price change
+total_difference = filtered_df["price_difference"].sum()
+st.markdown(f"### Total estimated monthly price difference: {gbp(total_difference)}")
 
 
 # =======.======================
