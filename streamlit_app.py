@@ -124,6 +124,8 @@ tariff_cat_opts = load_tariff_categories(conn)
 dates = get_latest_dates()
 max_rx_date = dates["prescribing"]
 max_tariff_date = dates["tariff"]
+tariff_month = datetime.strptime(max_tariff_date, '%Y-%m-%d').strftime('%B %Y')
+rx_month = datetime.strptime(max_rx_date, '%Y-%m-%d').strftime('%B %Y')
 
 # --- Header ---
 base_dir = os.path.dirname(__file__)
@@ -135,8 +137,8 @@ Please let us know what you think, and what you'd like to see.  Email us at [ben
 
 # --- Sidebar filters ---
 with st.sidebar:
-    st.markdown(f"### Drug Tariff month: {datetime.strptime(max_tariff_date, '%Y-%m-%d').strftime('%B %Y')}")
-    st.markdown(f"### Prescribing data used for estimate: {datetime.strptime(max_rx_date, '%Y-%m-%d').strftime('%B %Y')}")
+    st.markdown(f"### Drug Tariff month: {tariff_month}")
+    st.markdown(f"### Prescribing data used for estimate: {rx_month}")
 
     st.header("Organisation Filter")
     st.info("Select an organisation at any level.")
@@ -177,7 +179,7 @@ with st.sidebar:
     )
 
 # --- Summary section ---
-st.markdown(f"#### Total changes for {datetime.strptime(max_tariff_date, '%Y-%m-%d').strftime('%B %Y')}")
+st.markdown(f"#### Total changes for {tariff_month}")
 render_summary(build_price_change_df(vmpp_df))
 
 # --- Filtered prescribing query ---
