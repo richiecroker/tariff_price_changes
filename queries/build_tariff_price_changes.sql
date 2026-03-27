@@ -23,29 +23,9 @@ WITH price_changes AS (
   ORDER BY vmpp, tariff_category
 ),
 
-tariff_map AS (
-  SELECT 
-    SAFE_CAST(category AS INT64) AS category, 
-    discount 
-  FROM UNNEST([
-    STRUCT('1' AS category, 0.2 AS discount),
-    STRUCT('3' AS category, 0.05 AS discount),
-    STRUCT('5' AS category, 0.0985 AS discount),
-    STRUCT('6' AS category, 0.0985 AS discount),
-    STRUCT('7' AS category, 0.0985 AS discount),
-    STRUCT('8' AS category, 0.0985 AS discount),
-    STRUCT('9' AS category, 0.05 AS discount),
-    STRUCT('10' AS category, 0.0985 AS discount),
-    STRUCT('11' AS category, 0.2 AS discount),
-    STRUCT('12' AS category, 0.05 AS discount),
-    STRUCT('13' AS category, 0.05 AS discount),
-    STRUCT('14' AS category, 0.05 AS discount)
-  ])
-),
-
 agg_price_changes AS (
   SELECT
-    DATE(pc.date) as date,
+    DATE(pc.date) AS date,
     CAST(pc.vmpp AS STRING) AS vmpp,
     vf.bnf_code,
     pc.tariff_category,
@@ -54,16 +34,20 @@ agg_price_changes AS (
     pc.prev_tariff_category,
     prev_dtcat.descr AS prev_tariff_cat,
     pc.previous_price_pence,
-        vf.nm,
-    (((1 - COALESCE(tf.discount, 0.05)) * pc.price_pence) - 
-    ((1 - COALESCE(ptf.discount, 0.05)) * pc.previous_price_pence)) / (vf.qtyval * 100) AS price_diff_pu
+    vf.nm,
+    (((1 - CASE
+            WHEN pc.tariff_category IN (1, 11) THEN 0.2
+            WHEN pc.tariff_category IN (5, 6, 7, 8, 10) THEN 0.0985
+            ELSE 0.05
+        END) * pc.price_pence) -
+     ((1 - CASE
+            WHEN pc.prev_tariff_category IN (1, 11) THEN 0.2
+            WHEN pc.prev_tariff_category IN (5, 6, 7, 8, 10) THEN 0.0985
+            ELSE 0.05
+        END) * pc.previous_price_pence)) / (vf.qtyval * 100) AS price_diff_pu
   FROM price_changes pc
   INNER JOIN dmd.vmpp_full vf
     ON vf.id = pc.vmpp
-  INNER JOIN tariff_map tf
-    ON pc.tariff_category = tf.category
-  INNER JOIN tariff_map ptf
-    ON pc.prev_tariff_category = ptf.category
   INNER JOIN dmd.dtpaymentcategory AS dtcat
     ON pc.tariff_category = dtcat.cd
   INNER JOIN dmd.dtpaymentcategory AS prev_dtcat
