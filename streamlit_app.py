@@ -191,7 +191,7 @@ page20 = sorted_df.iloc[page * 20:(page + 1) * 20]
 
 for _, row in page20.iterrows():
     colour = "red" if row["price_difference"] > 0 else "green"
-    label = f":{colour}[{row['bnf_name']} — {gbp2f(row['price_difference'])}]"
+    label = f":{colour}[{row['bnf_name']}: {gbp2f(row['price_difference'])}]"
     vmpp_details = vmpp_df[vmpp_df["bnf_code"] == row["bnf_code"]].copy()
     with st.expander(label):
         display_df = vmpp_details[["nm", "price_pence", "previous_price_pence", "tariff_category"]].copy()
@@ -211,3 +211,15 @@ with col_next:
     if st.button("Next →", disabled=page >= total_pages - 1):
         st.session_state.page += 1
         st.rerun()
+
+# ── Changelog ─────────────────────────────────────────────────────────────────
+
+st.divider()
+
+st.subheader("Changelog")
+with open("changelog.yaml") as f:
+    changelog = yaml.safe_load(f)
+
+with st.expander("Click to see changelog"):
+    for entry in reversed(changelog):
+        st.markdown(f"**{entry['date']}** — {entry['change']} *({entry['person']})*")
