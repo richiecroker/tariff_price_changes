@@ -12,7 +12,7 @@ logging.basicConfig(level=logging.INFO)
 # Set wide layout
 st.set_page_config(layout="wide")
 
-st.image("content/OpenPrescribing.svg")
+st.image("content\OpenPrescribing.svg")
 
 st.info(
     """##### Hello!  This is a **very** early prototype of estimating the impact of drug tariff changes.  
