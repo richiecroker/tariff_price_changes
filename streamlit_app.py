@@ -190,9 +190,9 @@ if "page" not in st.session_state:
     st.session_state.page = 0
 
 if sort_option == "Largest Increases":
-    sorted_df = filtered_df[filtered_df["price_difference"] > 0].sort_values("price_difference", ascending=False)
+    sorted_df = filtered_df.sort_values("price_difference", ascending=False)
 else:
-    sorted_df = filtered_df[filtered_df["price_difference"] < 0].sort_values("price_difference", ascending=True)
+    sorted_df = filtered_df.sort_values("price_difference", ascending=True)
 
 total_pages = max(1, (len(sorted_df) - 1) // 20 + 1)
 page = st.session_state.page
