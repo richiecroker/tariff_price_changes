@@ -16,7 +16,7 @@ base_dir = os.path.dirname(__file__)
 st.set_page_config(layout="wide")
 
 st.image("content/OpenPrescribing.svg")
-
+st.image("content/OpenPrescribing.svg")
 st.info(
     """##### Hello!  This is a **very** early prototype of estimating the impact of drug tariff changes.  
 Please let us know what you think, and what you'd like to see.  Email us at [bennett@phc.ox.ac.uk](mailto:bennett@phc.ox.ac.uk)"""
