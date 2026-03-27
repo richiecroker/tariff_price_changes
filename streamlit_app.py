@@ -108,6 +108,16 @@ with st.sidebar:
 
     selected_practice_codes = df_selected["practice_code"].unique().tolist()
 
+    st.header("Further Filters")
+    tariff_cat_opts = ["(All)"] + sorted(conn.execute("SELECT DISTINCT tariff_cat FROM tariff_price_changes ORDER BY tariff_cat").df()["tariff_cat"].dropna().tolist())
+    sel_tariff_cat = st.selectbox("DT Category", tariff_cat_opts, key="sel_tariff_cat")
+
+    sort_option = st.radio(
+        "Sort by",
+        ["Largest Increases", "Largest Reductions"],
+        key="sort_option"
+    )
+
 st.markdown (f"#### Total changes for {datetime.strptime(max_tariff_date, '%Y-%m-%d').strftime('%B %Y')}")
 
 # Coerce prices to numeric
@@ -142,10 +152,6 @@ for _, row in summary.iterrows():
     c3.write(f"No change: {row.get('unchanged', 0)}")
 
 
-
-
-
-
 conn.register("selected_practices", df_selected)
 
 
@@ -164,10 +170,12 @@ filtered_df = conn.execute("""
 
 conn.unregister("selected_practices")
 
+if sel_tariff_cat != "(All)":
+    filtered_df = filtered_df[filtered_df["tariff_cat"] == sel_tariff_cat]
+
 # Calculate and display total price change
 total_difference = filtered_df["price_difference"].sum()
 st.markdown(f"### Total estimated monthly price difference: {gbp(total_difference)}")
-
 
 st.markdown("""
 <style>
@@ -180,18 +188,11 @@ details {
 
 if "page" not in st.session_state:
     st.session_state.page = 0
-if "sort_desc" not in st.session_state:
-    st.session_state.sort_desc = True
 
-with st.sidebar:
-    if st.button("Sort: Largest First" if st.session_state.sort_desc else "Sort: Smallest First"):
-        st.session_state.sort_desc = not st.session_state.sort_desc
-        st.session_state.page = 0
-
-sorted_df = filtered_df.sort_values(
-    "price_difference",
-    ascending=not st.session_state.sort_desc
-)
+if sort_option == "Largest Increases":
+    sorted_df = filtered_df[filtered_df["price_difference"] > 0].sort_values("price_difference", ascending=False)
+else:
+    sorted_df = filtered_df[filtered_df["price_difference"] < 0].sort_values("price_difference", ascending=True)
 
 total_pages = max(1, (len(sorted_df) - 1) // 20 + 1)
 page = st.session_state.page
