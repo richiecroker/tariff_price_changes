@@ -26,7 +26,6 @@ vmpp_df = conn.execute("""
     SELECT * FROM vmpp_tariff_changes
     """).df()
 
-st.write(vmpp_df.columns.tolist())
 dates = get_latest_dates()
 max_rx_date = dates["prescribing"]
 max_tariff_date  = dates["tariff"]
@@ -90,7 +89,7 @@ with st.sidebar:
 
     selected_practice_codes = df_selected["practice_code"].unique().tolist()
 
-st.markdown (f"#### Total changes for {max_tariff_date}")
+st.markdown (f"#### Total changes for {datetime.strptime(max_rx_date, '%Y-%m-%d').strftime('%B %Y')}")
 
 # Coerce prices to numeric
 price = pd.to_numeric(vmpp_df["price_pence"], errors="coerce")
