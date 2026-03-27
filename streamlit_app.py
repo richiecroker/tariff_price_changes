@@ -243,15 +243,17 @@ st.markdown(f"### Total estimated monthly price difference: {gbp(total_differenc
 col1, col2 = st.columns(2)
 
 with col1:
-    st.markdown("#### Top 10 Cost Increases")
-    top_increases = filtered_df.nlargest(10, "price_difference")[["bnf_name", "price_difference"]].copy()
+    st.markdown("#### Top 10 estimated cost increases")
+    top_increases = filtered_df[filtered_df["price_difference"] > 0].nlargest(10, "price_difference")[["bnf_name", "price_difference"]].copy()
     top_increases["price_difference"] = top_increases["price_difference"].apply(gbp2f)
+    top_increases.columns = ["Presentation", "Cost Increase"]
     st.dataframe(top_increases, hide_index=True)
 
 with col2:
-    st.markdown("#### Top 10 Cost Reductions")
-    top_reductions = filtered_df.nsmallest(10, "price_difference")[["bnf_name", "price_difference"]].copy()
+    st.markdown("#### Top 10 estimated cost reductions")
+    top_reductions = filtered_df[filtered_df["price_difference"] < 0].nsmallest(10, "price_difference")[["bnf_name", "price_difference"]].copy()
     top_reductions["price_difference"] = top_reductions["price_difference"].apply(gbp2f)
+    top_reductions.columns = ["Presentation", "Cost Reduction"]
     st.dataframe(top_reductions, hide_index=True)
 
 st.write(filtered_df["price_difference"].describe())
