@@ -111,7 +111,7 @@ with st.sidebar:
 
     selected_practice_codes = df_selected["practice_code"].unique().tolist()
 
-st.markdown (f"#### Total changes for {datetime.strptime(max_rx_date, '%Y-%m-%d').strftime('%B %Y')}")
+st.markdown (f"#### Total changes for {datetime.strptime(max_tariff_date, '%Y-%m-%d').strftime('%B %Y')}")
 
 # Coerce prices to numeric
 price = pd.to_numeric(vmpp_df["price_pence"], errors="coerce")
