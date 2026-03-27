@@ -15,7 +15,7 @@ base_dir = os.path.dirname(__file__)
 # Set wide layout
 st.set_page_config(layout="wide")
 
-st.image(os.path.join(base_dir, "content", "OpenPrescribing.svg"))
+st.image("content/OpenPrescribing.svg")
 
 st.info(
     """##### Hello!  This is a **very** early prototype of estimating the impact of drug tariff changes.  
