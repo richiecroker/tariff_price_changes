@@ -231,7 +231,7 @@ filtered_df = conn.execute("""
     FROM prescribing AS rx
     INNER JOIN tariff_price_changes AS dt
     ON rx.bnf_code = dt.bnf_code
-    INNER JOIN selected_practices sp ON p.practice_code = sp.practice_code
+    INNER JOIN selected_practices sp ON rx.practice_code = sp.practice_code
     GROUP BY rx.bnf_name, rx.bnf_code, dt.tariff_cat
     """).df()
 
