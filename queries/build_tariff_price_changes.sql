@@ -74,9 +74,9 @@ bnf_code_price_changes AS (
   SELECT
     *,
     CASE 
-      WHEN ROW_NUMBER() OVER (PARTITION BY bnf_code ORDER BY price_diff_pu DESC) = 1
-      THEN 1 
-      ELSE 0
+        WHEN ROW_NUMBER() OVER (PARTITION BY bnf_code ORDER BY ABS(price_diff_pu) DESC) = 1
+        THEN 1 
+        ELSE 0
     END AS is_max_price_diff_pu
   FROM agg_price_changes
 )
