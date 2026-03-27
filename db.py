@@ -1,5 +1,4 @@
 import shutil
-import logging
 import os
 
 import duckdb
@@ -10,13 +9,19 @@ from google.cloud import bigquery, storage
 from google.oauth2 import service_account
 
 
-logger = logging.getLogger(__name__)
-
 # --- Constants ---
-BUCKET_NAME  = "ebmdatalab"
-GCS_DB_PATH  = "drug_tariff/tariffpricechanges-dev.duckdb"
-LOCAL_DB     = "/tmp/app.duckdb"
-SQL_DIR      = os.path.join(os.path.dirname(os.path.abspath(__file__)), "queries")
+BUCKET_NAME     = "ebmdatalab"
+GCS_DB_PATH     = "drug_tariff/tariffpricechanges-dev.duckdb"
+LOCAL_DB        = "/tmp/app.duckdb"
+SQL_DIR         = os.path.join(os.path.dirname(os.path.abspath(__file__)), "queries")
+REQUIRED_TABLES = {"prescribing", "tariff_price_changes", "vmpp_tariff_changes", "practices"}
+
+TABLES_TO_BUILD = [
+    ("prescribing",          "build_prescribing.sql"),
+    ("tariff_price_changes", "build_tariff_price_changes.sql"),
+    ("vmpp_tariff_changes",  "build_vmpp_tariff_changes.sql"),
+    ("practices",            "build_practices.sql"),
+]
 
 
 # --- Auth / client helpers ---
@@ -33,15 +38,19 @@ def _bq_client():
 
 # --- Helper functions ---
 
-def _latest_bq_month(table: str, date_col: str) -> str | None:
+def _latest_bq_dates() -> dict:
+    """Fetch latest prescribing and tariff dates from BigQuery in a single query."""
     bq = _bq_client()
-    try:
-        result = bq.query(f"SELECT DATE(MAX({date_col})) FROM `{table}`").result()
-        row = list(result)[0]
-        return str(row[0]) if row[0] else None
-    except Exception as e:
-        logger.error("Failed to get latest %s from %s: %s", date_col, table, e)
-        return None
+    result = bq.query("""
+        SELECT
+            (SELECT DATE(MAX(month)) FROM `hscic.normalised_prescribing`) AS prescribing,
+            (SELECT DATE(MAX(date))  FROM `dmd.tariffprice`)              AS tariff
+    """).result()
+    row = list(result)[0]
+    return {
+        "prescribing": str(row.prescribing) if row.prescribing else None,
+        "tariff":      str(row.tariff)       if row.tariff      else None,
+    }
 
 def _cached_month_for_table(conn, table_name: str, date_col: str) -> str | None:
     try:
@@ -51,6 +60,15 @@ def _cached_month_for_table(conn, table_name: str, date_col: str) -> str | None:
         return str(result[0]) if result[0] else None
     except Exception:
         return None
+
+def _is_db_current(conn, latest: dict) -> bool:
+    """Return True if the local DuckDB has all required tables and is up to date."""
+    tables = {r[0] for r in conn.execute("SHOW TABLES").fetchall()}
+    return (
+        REQUIRED_TABLES.issubset(tables)
+        and _cached_month_for_table(conn, "prescribing", "month") == latest["prescribing"]
+        and _cached_month_for_table(conn, "tariff_price_changes", "date") == latest["tariff"]
+    )
 
 def _normalise_df(df: pd.DataFrame) -> pd.DataFrame:
     for col in df.columns:
@@ -62,15 +80,15 @@ def _rebuild_table(conn, table_name: str, sql_file: str):
     with open(os.path.join(SQL_DIR, sql_file)) as f:
         sql = f.read()
     bq = _bq_client()
-    try:
-        df = _normalise_df(bq.query(sql).result().to_dataframe())
-    except Exception as e:
-        logger.error("BigQuery error rebuilding %s: %s", table_name, e)
-        raise
+    df = _normalise_df(bq.query(sql).result().to_dataframe())
     conn.execute(f"DROP TABLE IF EXISTS {table_name}")
     conn.register("_tmp", df)
     conn.execute(f"CREATE TABLE {table_name} AS SELECT * FROM _tmp")
     conn.unregister("_tmp")
+
+def _rebuild_all_tables(conn):
+    for table_name, sql_file in TABLES_TO_BUILD:
+        _rebuild_table(conn, table_name, sql_file)
 
 def _save_db_to_gcs(bucket):
     with st.spinner("Saving database to GCS for next time..."):
@@ -80,7 +98,7 @@ def _save_db_to_gcs(bucket):
             blob = bucket.blob(GCS_DB_PATH)
             blob.upload_from_filename(tmp, if_generation_match=None)
         except Exception as e:
-            logger.warning("Failed to save DB to GCS (non-fatal): %s", e)
+            st.warning(f"Failed to save DB to GCS (non-fatal): {e}")
         finally:
             os.remove(tmp)
 
@@ -92,30 +110,17 @@ def get_duckdb_connection():
     storage_client = _gcs_client()
     bucket = storage_client.bucket(BUCKET_NAME)
 
-    latest_prescribing_month = _latest_bq_month("hscic.normalised_prescribing", "month")
-    latest_tariff_date = _latest_bq_month("dmd.tariffprice", "date")
-    logger.info("Latest prescribing month in BQ: %s", latest_prescribing_month)
-    logger.info("Latest tariff date in BQ: %s", latest_tariff_date)
+    latest = _latest_bq_dates()
 
     # --- Check 1: is there already a local DB that's up to date? ---
     if os.path.exists(LOCAL_DB):
         try:
             conn = duckdb.connect(LOCAL_DB)
-            tables = [r[0] for r in conn.execute("SHOW TABLES").fetchall()]
-            if (
-                "prescribing" in tables
-                and "tariff_price_changes" in tables
-                and "vmpp_tariff_changes" in tables
-                and "practices" in tables
-                and _cached_month_for_table(conn, "prescribing", "month") == latest_prescribing_month
-                and _cached_month_for_table(conn, "tariff_price_changes", "date") == latest_tariff_date
-            ):
-                logger.info("Local DuckDB is up to date, reusing.")
+            if _is_db_current(conn, latest):
                 return conn
             conn.close()
-            logger.info("Local DuckDB is stale.")
-        except Exception as e:
-            logger.warning("Local DuckDB unusable: %s", e)
+        except Exception:
+            pass
 
     # --- Check 2: download the cached DB from GCS and see if that's up to date ---
     tmp_path = LOCAL_DB + ".tmp"
@@ -124,21 +129,10 @@ def get_duckdb_connection():
             bucket.blob(GCS_DB_PATH).download_to_filename(tmp_path)
         os.replace(tmp_path, LOCAL_DB)
         conn = duckdb.connect(LOCAL_DB)
-        tables = [r[0] for r in conn.execute("SHOW TABLES").fetchall()]
-        if (
-            "prescribing" in tables
-            and "tariff_price_changes" in tables
-            and "vmpp_tariff_changes" in tables
-            and "practices" in tables
-            and _cached_month_for_table(conn, "prescribing", "month") == latest_prescribing_month
-            and _cached_month_for_table(conn, "tariff_price_changes", "date") == latest_tariff_date
-        ):
-            logger.info("GCS-cached DuckDB is up to date, using it.")
+        if _is_db_current(conn, latest):
             return conn
-        logger.info("GCS-cached DuckDB is stale or missing tables, doing full rebuild.")
         conn.close()
-    except Exception as e:
-        logger.info("No usable GCS-cached DuckDB (%s), doing full rebuild.", e)
+    except Exception:
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
 
@@ -148,27 +142,19 @@ def get_duckdb_connection():
 
     with st.spinner("Rebuilding database from source data - this may take a few minutes..."):
         conn = duckdb.connect(LOCAL_DB)
-        _rebuild_table(conn, "prescribing", "build_prescribing.sql")
-        _rebuild_table(conn, "tariff_price_changes", "build_tariff_price_changes.sql")
-        _rebuild_table(conn, "vmpp_tariff_changes", "build_vmpp_tariff_changes.sql")
-        _rebuild_table(conn, "practices", "build_practices.sql")      
+        _rebuild_all_tables(conn)
         conn.checkpoint()
         conn.close()
-
-    logger.info("DB file exists after rebuild: %s, size: %s",
-                os.path.exists(LOCAL_DB),
-                os.path.getsize(LOCAL_DB) if os.path.exists(LOCAL_DB) else "N/A")
-
-    if not os.path.exists(LOCAL_DB):
-        logger.error("DuckDB file not created at %s", LOCAL_DB)
-        return duckdb.connect(LOCAL_DB)
 
     _save_db_to_gcs(bucket)
     return duckdb.connect(LOCAL_DB)
 
+
 @st.cache_resource
 def get_latest_dates():
+    """Read latest dates from DuckDB — no extra BigQuery calls."""
+    conn = get_duckdb_connection()
     return {
-        "prescribing": _latest_bq_month("hscic.normalised_prescribing", "month"),
-        "tariff": _latest_bq_month("dmd.tariffprice", "date")
+        "prescribing": _cached_month_for_table(conn, "prescribing", "month"),
+        "tariff":      _cached_month_for_table(conn, "tariff_price_changes", "date"),
     }
