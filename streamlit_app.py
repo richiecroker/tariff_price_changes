@@ -219,7 +219,7 @@ with col_next:
 
 st.divider()
 
-with st.expander("Click to see our methodology", icon=ℹ️):
+with st.expander("Click to see our methodology", icon="ℹ️"):
     st.write('''
         we're great!
         ''')
