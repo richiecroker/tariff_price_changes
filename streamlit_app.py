@@ -20,21 +20,21 @@ Please let us know what you think, and what you'd like to see.  Email us at [ben
 
 conn = get_duckdb_connection()
 
-icb_df = conn.execute("""
-    SELECT
-        prac.icb_name,
-        rx.bnf_name,
-        rx.bnf_code,
-        dt.tariff_cat,
-        SUM(rx.quantity * dt.price_diff_pu * dt.is_max_price_diff_pu) AS price_difference
-    FROM prescribing AS rx
-    INNER JOIN tariff_price_changes AS dt
-    ON rx.bnf_code = dt.bnf_code
-    INNER JOIN practices AS prac
-    ON
-    rx.practice = prac.practice_code
-    GROUP BY prac.icb_name, rx.bnf_name, rx.bnf_code, dt.tariff_cat
-    """).df()
+#icb_df = conn.execute("""
+#    SELECT
+#        prac.icb_name,
+#        rx.bnf_name,
+#        rx.bnf_code,
+#        dt.tariff_cat,
+#        SUM(rx.quantity * dt.price_diff_pu * dt.is_max_price_diff_pu) AS price_difference
+#    FROM prescribing AS rx
+#    INNER JOIN tariff_price_changes AS dt
+ #   ON rx.bnf_code = dt.bnf_code
+#    INNER JOIN practices AS prac
+#    ON
+#    rx.practice = prac.practice_code
+#    GROUP BY prac.icb_name, rx.bnf_name, rx.bnf_code, dt.tariff_cat
+#    """).df()
 
 
 vmpp_df = conn.execute("""
@@ -45,9 +45,6 @@ vmpp_df = conn.execute("""
 dates = get_latest_dates()
 max_rx_date = dates["prescribing"]
 max_tariff_date  = dates["tariff"]
-#raw_max_tariff_date = data_loader.get_cached_max_tariffdate()
-#max_tariff_date = pd.to_datetime(raw_max_tariff_date, errors="coerce").strftime("%B %Y")
-#max_tariff = conn.execute("SELECT MAX(date) FROM tariff_price_changes").fetchone()[0]
 
 # calculate number of changes to vmpp
 
