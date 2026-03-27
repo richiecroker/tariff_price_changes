@@ -219,9 +219,10 @@ with col_next:
 
 st.divider()
 
-with st.expander("Click to see our methodology", icon=":material/quick_reference:"):
+with st.expander("Click here to read our methodology", icon=":material/quick_reference:"):
     st.write('''
-        we're great!
+        We use the [Part VIIIA Drug Tariff data](https://www.nhsbsa.nhs.uk/pharmacies-gp-practices-and-appliance-contractors/drug-tariff/drug-tariff-part-viii) available from the NHS Business Services Authority.  This is generally available three working days before the appropriate month.
+        The prescribing data comes from the [English Prescribing Dataset](https://opendata.nhsbsa.net/dataset/english-prescribing-dataset-epd-with-snomed-code), also supplied by the NHS Business Services Authority.
         ''')
 
 st.subheader("Changelog")
