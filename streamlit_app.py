@@ -234,7 +234,6 @@ filtered_df = conn.execute("""
     """).df()
 
 conn.unregister("selected_practices")
-st.dataframe(filtered_df)
 
 # Calculate and display total price change
 total_difference = filtered_df["price_difference"].sum()
@@ -256,8 +255,6 @@ with col2:
     top_reductions.columns = ["Presentation", "Cost Reduction"]
     st.dataframe(top_reductions, hide_index=True)
 
-st.write(filtered_df["price_difference"].describe())
-st.write(conn.execute("SELECT MIN(price_diff_pu), MAX(price_diff_pu) FROM tariff_price_changes").df())
 # =======.======================
 # Master aggregation with details
 # =============================
