@@ -224,6 +224,13 @@ with st.expander("Click here to read our methodology", icon=":material/quick_ref
         We use the [Part VIIIA Drug Tariff data](https://www.nhsbsa.nhs.uk/pharmacies-gp-practices-and-appliance-contractors/drug-tariff/drug-tariff-part-viii) available from the NHS Business Services Authority.  This is generally available three working days before the appropriate month.
         
         The prescribing data comes from the [English Prescribing Dataset](https://opendata.nhsbsa.net/dataset/english-prescribing-dataset-epd-with-snomed-code), also supplied by the NHS Business Services Authority.
+
+        The estimator calculates the changes in the following way:
+
+        1.  Our code compares the price of every Virtual Medicinal Product Pack (VMPP) level presentation in Part VIIIA of the Drug Tariff with the previous month's price.  If it finds that it's different, it's included in our analysis.
+        2.  We then subtract the new price from the old price, and divide by the quantity in the pack, which gives us our *price difference per unit*.
+        3.  Sometimes there are multiple packs available for one presentation (for example: [paracetamol 500mg tablets has a tariff price for 32 and 100 tablets](https://openprescribing.net/tariff/?codes=0407010H0AAAMAM).  The prescribing data doesn't allow us to distinguish betwen these packs, so we identify which pack 
+        has the highest absolute change per unit, and use that.  
         ''')
 
 st.subheader("Changelog")
