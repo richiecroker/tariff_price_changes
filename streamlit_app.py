@@ -219,8 +219,8 @@ with col_next:
 
 st.divider()
 
-with st.expander("Show more"):
-    with open("my_text.md") as f:
+with st.expander("Click here to read our methodology", icon=":material/quick_reference:"):
+    with open("methodology.md") as f:
         st.markdown(f.read())
 
 st.subheader("Changelog")
