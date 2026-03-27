@@ -280,7 +280,7 @@ for _, row in page20.iterrows():
     label = f"{row['bnf_name']} — {gbp2f(row['price_difference'])}"
     vmpp_details = vmpp_df[vmpp_df["bnf_code"] == row["bnf_code"]].copy()
     with st.expander(label):
-        display_df = vmpp_details[["nm", "price_pence", "previous_price_pence", "tariff_cat"]].copy()
+        display_df = vmpp_details[["nm", "price_pence", "previous_price_pence", "tariff_category"]].copy()
         display_df["price_pence"] = (pd.to_numeric(display_df["price_pence"], errors="coerce") / 100).apply(gbp2f)
         display_df["previous_price_pence"] = (pd.to_numeric(display_df["previous_price_pence"], errors="coerce") / 100).apply(gbp2f)
         display_df.columns = ["Name", "Price", "Previous Price", "DT Category"]
