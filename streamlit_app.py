@@ -240,7 +240,18 @@ st.dataframe(filtered_df)
 total_difference = filtered_df["price_difference"].sum()
 st.markdown(f"### Total estimated monthly price difference: {gbp(total_difference)}")
 
+col1, col2 = st.columns(2)
 
+with col1:
+    st.markdown("#### Top 10 Cost Increases")
+    top_increases = filtered_df.nlargest(10, "price_difference")[["bnf_name", "price_difference"]]
+    st.dataframe(top_increases, hide_index=True)
+
+with col2:
+    st.markdown("#### Top 10 Cost Reductions")
+    top_reductions = filtered_df.nsmallest(10, "price_difference")[["bnf_name", "price_difference"]]
+    st.dataframe(top_reductions, hide_index=True)
+    
 # =======.======================
 # Master aggregation with details
 # =============================
