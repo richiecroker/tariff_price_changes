@@ -20,28 +20,12 @@ Please let us know what you think, and what you'd like to see.  Email us at [ben
 
 st.title("Drug Tariff price change estimator")
 
-conn = get_duckdb_connection()
-
-icb_df = conn.execute("""
-    SELECT
-        prac.icb_name,
-        rx.bnf_name,
-        rx.bnf_code,
-        dt.tariff_cat,
-        SUM(rx.quantity * dt.price_diff_pu * dt.is_max_price_diff_pu) AS price_difference
-    FROM prescribing AS rx
-    INNER JOIN tariff_price_changes AS dt
-    ON rx.bnf_code = dt.bnf_code
-    INNER JOIN practices AS prac
-    ON
-    rx.practice = prac.practice_code
-    GROUP BY prac.icb_name, rx.bnf_name, rx.bnf_code, dt.tariff_cat
-    """).df()
 
 vmpp_df = conn.execute("""
     SELECT * FROM vmpp_tariff_changes
     """).df()
 
+st.write(vmpp_df.columns.tolist())
 dates = get_latest_dates()
 max_rx_date = dates["prescribing"]
 max_tariff_date  = dates["tariff"]
@@ -105,7 +89,7 @@ with st.sidebar:
 
     selected_practice_codes = df_selected["practice_code"].unique().tolist()
 
-st.markdown (f"#### Total changes for {datetime.strptime(max_rx_date, '%Y-%m-%d').strftime('%B %Y')}")
+st.markdown (f"#### Total changes for {max_tariff_date}")
 
 # Coerce prices to numeric
 price = pd.to_numeric(vmpp_df["price_pence"], errors="coerce")
@@ -212,5 +196,3 @@ with col_next:
     if st.button("Next →", disabled=page >= total_pages - 1):
         st.session_state.page += 1
         st.rerun()
-
-
