@@ -244,14 +244,16 @@ col1, col2 = st.columns(2)
 
 with col1:
     st.markdown("#### Top 10 Cost Increases")
-    top_increases = filtered_df.nlargest(10, "price_difference")[["bnf_name", "price_difference"]]
+    top_increases = filtered_df.nlargest(10, "price_difference")[["bnf_name", "price_difference"]].copy()
+    top_increases["price_difference"] = top_increases["price_difference"].apply(gbp2f)
     st.dataframe(top_increases, hide_index=True)
 
 with col2:
     st.markdown("#### Top 10 Cost Reductions")
-    top_reductions = filtered_df.nsmallest(10, "price_difference")[["bnf_name", "price_difference"]]
+    top_reductions = filtered_df.nsmallest(10, "price_difference")[["bnf_name", "price_difference"]].copy()
+    top_reductions["price_difference"] = top_reductions["price_difference"].apply(gbp2f)
     st.dataframe(top_reductions, hide_index=True)
-    
+
 # =======.======================
 # Master aggregation with details
 # =============================
