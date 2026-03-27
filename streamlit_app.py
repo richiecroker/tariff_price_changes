@@ -255,7 +255,7 @@ with col2:
     st.dataframe(top_reductions, hide_index=True)
 
 st.write(filtered_df["price_difference"].describe())
-
+st.write(conn.execute("SELECT MIN(price_diff_pu), MAX(price_diff_pu) FROM tariff_price_changes").df())
 # =======.======================
 # Master aggregation with details
 # =============================
