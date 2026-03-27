@@ -5,3 +5,7 @@
 - date: 2026-03-26
   change: Rebuilt using DuckDB and refactored all code
   person: Richard Croker
+
+- date: 2026-03-27
+  change: Fixed page issue when filtering
+  person: Richard Croker

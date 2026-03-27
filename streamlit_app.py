@@ -187,6 +187,8 @@ else:
     sorted_df = filtered_df.sort_values("price_difference", ascending=True)
 
 total_pages = max(1, (len(sorted_df) - 1) // 20 + 1)
+if st.session_state.page >= total_pages:
+    st.session_state.page = 0
 page = st.session_state.page
 page20 = sorted_df.iloc[page * 20:(page + 1) * 20]
 
