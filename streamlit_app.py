@@ -267,9 +267,16 @@ details {
 
 if "page" not in st.session_state:
     st.session_state.page = 0
+if "sort_desc" not in st.session_state:
+    st.session_state.sort_desc = True
+
+with st.sidebar:
+    if st.button("Sort: Largest First" if st.session_state.sort_desc else "Sort: Smallest First"):
+        st.session_state.sort_desc = not st.session_state.sort_desc
+        st.session_state.page = 0
 
 sorted_df = filtered_df.reindex(
-    filtered_df["price_difference"].abs().sort_values(ascending=False).index
+    filtered_df["price_difference"].abs().sort_values(ascending=not st.session_state.sort_desc).index
 )
 
 total_pages = max(1, (len(sorted_df) - 1) // 20 + 1)
