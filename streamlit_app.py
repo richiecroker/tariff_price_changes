@@ -265,21 +265,12 @@ details {
 </style>
 """, unsafe_allow_html=True)
 
-if "sort_increases" not in st.session_state:
-    st.session_state.sort_increases = True
 if "page" not in st.session_state:
     st.session_state.page = 0
 
-col_btn, _ = st.columns([1, 4])
-with col_btn:
-    if st.button("Show Increases" if not st.session_state.sort_increases else "Show Reductions"):
-        st.session_state.sort_increases = not st.session_state.sort_increases
-        st.session_state.page = 0
-
-if st.session_state.sort_increases:
-    sorted_df = filtered_df[filtered_df["price_difference"] > 0].sort_values("price_difference", ascending=False)
-else:
-    sorted_df = filtered_df[filtered_df["price_difference"] < 0].sort_values("price_difference", ascending=True)
+sorted_df = filtered_df.reindex(
+    filtered_df["price_difference"].abs().sort_values(ascending=False).index
+)
 
 total_pages = max(1, (len(sorted_df) - 1) // 20 + 1)
 page = st.session_state.page
@@ -307,7 +298,6 @@ with col_next:
     if st.button("Next →", disabled=page >= total_pages - 1):
         st.session_state.page += 1
         st.rerun()
-
 
 
 
