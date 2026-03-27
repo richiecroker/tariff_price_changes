@@ -67,7 +67,7 @@ with st.sidebar:
     st.markdown(f"### Drug Tariff month: {datetime.strptime(max_tariff_date, '%Y-%m-%d').strftime('%B %Y')}")
     st.markdown(f"### Prescribing data used for estimate: {datetime.strptime(max_rx_date, '%Y-%m-%d').strftime('%B %Y')}")
 
-    st.header("Filters")
+    st.header("Organisation Filter")
     st.info("Select an organisation at any level.")
     
     region_opts = sorted(practices_df["region_name"].dropna().unique().tolist())
@@ -92,9 +92,9 @@ with st.sidebar:
 
     selected_practice_codes = df_selected["practice_code"].unique().tolist()
 
-    st.header("Further Filters")
+    st.header("Tariff Filter")
     tariff_cat_opts = ["(All)"] + sorted(conn.execute("SELECT DISTINCT tariff_cat FROM tariff_price_changes ORDER BY tariff_cat").df()["tariff_cat"].dropna().tolist())
-    sel_tariff_cat = st.selectbox("DT Category", tariff_cat_opts, key="sel_tariff_cat")
+    sel_tariff_cat = st.multiselect("DT Category", tariff_cat_opts, key="sel_tariff_cat")
 
     sort_option = st.radio(
         "Sort by",
