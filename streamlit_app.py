@@ -238,8 +238,9 @@ with st.sidebar:
         st.session_state.sort_desc = not st.session_state.sort_desc
         st.session_state.page = 0
 
-sorted_df = filtered_df.reindex(
-    filtered_df["price_difference"].abs().sort_values(ascending=not st.session_state.sort_desc).index
+sorted_df = filtered_df.sort_values(
+    "price_difference",
+    ascending=not st.session_state.sort_desc
 )
 
 total_pages = max(1, (len(sorted_df) - 1) // 20 + 1)
@@ -270,18 +271,3 @@ with col_next:
         st.rerun()
 
 
-
-
-
-
-
-
-
-# Add download button for full dataset
-csv_data = master_df[master_df["is_detail"] == False][["bnf_name", "bnf_code", "price_difference_sum"]].to_csv(index=False)
-st.download_button(
-    "Download full table as CSV",
-    csv_data,
-    file_name=f"bnf_prices_{selected_name.replace(' ', '_')}.csv",
-    mime="text/csv"
-)
