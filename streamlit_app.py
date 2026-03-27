@@ -54,6 +54,12 @@ def build_price_change_df(vmpp_df):
     df.loc[df["price"] < df["prev_price"], "price_change"] = "decrease"
     return df
 
+def cascading_filter(df, col, label, key):
+    opts = sorted(df[col].dropna().unique().tolist())
+    sel = [v for v in st.session_state.get(key, []) if v in opts]
+    sel = st.multiselect(label, opts, default=sel, key=key)
+    return df if not sel else df[df[col].isin(sel)]
+
 def render_summary(df):
     """Render a per-category increase/decrease/unchanged summary."""
     summary = (
@@ -143,25 +149,10 @@ with st.sidebar:
     st.header("Organisation Filter")
     st.info("Select an organisation at any level.")
 
-    region_opts = sorted(practices_df["region_name"].dropna().unique().tolist())
-    sel_regions = [v for v in st.session_state.get("sel_region", []) if v in region_opts]
-    sel_regions = st.multiselect("Region", region_opts, default=sel_regions, key="sel_region")
-    df_region = practices_df if not sel_regions else practices_df[practices_df["region_name"].isin(sel_regions)]
-
-    icb_opts = sorted(df_region["icb_name"].dropna().unique().tolist())
-    sel_icbs = [v for v in st.session_state.get("sel_icb", []) if v in icb_opts]
-    sel_icbs = st.multiselect("ICB", icb_opts, default=sel_icbs, key="sel_icb")
-    df_icb = df_region if not sel_icbs else df_region[df_region["icb_name"].isin(sel_icbs)]
-
-    pcn_opts = sorted(df_icb["pcn_name"].dropna().unique().tolist())
-    sel_pcns = [v for v in st.session_state.get("sel_pcn", []) if v in pcn_opts]
-    sel_pcns = st.multiselect("PCN", pcn_opts, default=sel_pcns, key="sel_pcn")
-    df_pcn = df_icb if not sel_pcns else df_icb[df_icb["pcn_name"].isin(sel_pcns)]
-
-    practice_opts = sorted(df_pcn["practice_name"].dropna().unique().tolist())
-    sel_practices = [v for v in st.session_state.get("sel_practice", []) if v in practice_opts]
-    sel_practices = st.multiselect("Practice", practice_opts, default=sel_practices, key="sel_practice")
-    df_selected = df_pcn if not sel_practices else df_pcn[df_pcn["practice_name"].isin(sel_practices)]
+    df_region   = cascading_filter(practices_df, "region_name",   "Region",   "sel_region")
+    df_icb      = cascading_filter(df_region,    "icb_name",      "ICB",      "sel_icb")
+    df_pcn      = cascading_filter(df_icb,       "pcn_name",      "PCN",      "sel_pcn")
+    df_selected = cascading_filter(df_pcn,       "practice_name", "Practice", "sel_practice")
 
     selected_practice_codes = df_selected["practice_code"].unique().tolist()
 
