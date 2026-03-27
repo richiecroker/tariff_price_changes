@@ -67,7 +67,7 @@ with st.sidebar:
     st.markdown(f"### Drug Tariff month: {datetime.strptime(max_tariff_date, '%Y-%m-%d').strftime('%B %Y')}")
     st.markdown(f"### Prescribing data used for estimate: {datetime.strptime(max_rx_date, '%Y-%m-%d').strftime('%B %Y')}")
 
-    st.header("Filters")
+    st.header("Organisation Filter")
     st.info("Select an organisation at any level.")
     
     region_opts = sorted(practices_df["region_name"].dropna().unique().tolist())
@@ -92,9 +92,9 @@ with st.sidebar:
 
     selected_practice_codes = df_selected["practice_code"].unique().tolist()
 
-    st.header("Further Filters")
+    st.header("Tariff Filter")
     tariff_cat_opts = ["(All)"] + sorted(conn.execute("SELECT DISTINCT tariff_cat FROM tariff_price_changes ORDER BY tariff_cat").df()["tariff_cat"].dropna().tolist())
-    sel_tariff_cat = st.selectbox("DT Category", tariff_cat_opts, key="sel_tariff_cat")
+    sel_tariff_cat = st.multiselect("DT Category", tariff_cat_opts, key="sel_tariff_cat")
 
     sort_option = st.radio(
         "Sort by",
@@ -154,8 +154,8 @@ filtered_df = conn.execute("""
 
 conn.unregister("selected_practices")
 
-if sel_tariff_cat != "(All)":
-    filtered_df = filtered_df[filtered_df["tariff_cat"] == sel_tariff_cat]
+if sel_tariff_cat:
+    filtered_df = filtered_df[filtered_df["tariff_cat"].isin(sel_tariff_cat)]
 
 # Calculate and display total price change
 total_difference = filtered_df["price_difference"].sum()
@@ -187,6 +187,8 @@ else:
     sorted_df = filtered_df.sort_values("price_difference", ascending=True)
 
 total_pages = max(1, (len(sorted_df) - 1) // 20 + 1)
+if st.session_state.page >= total_pages:
+    st.session_state.page = 0
 page = st.session_state.page
 page20 = sorted_df.iloc[page * 20:(page + 1) * 20]
 
