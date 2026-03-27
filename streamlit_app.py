@@ -256,6 +256,15 @@ with col2:
     st.dataframe(top_reductions, hide_index=True)
 
 
+st.markdown("""
+<style>
+details {
+    border: none !important;
+    box-shadow: none !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
 if "sort_increases" not in st.session_state:
     st.session_state.sort_increases = True
 if "page" not in st.session_state:
@@ -265,7 +274,7 @@ col_btn, _ = st.columns([1, 4])
 with col_btn:
     if st.button("Show Increases" if not st.session_state.sort_increases else "Show Reductions"):
         st.session_state.sort_increases = not st.session_state.sort_increases
-        st.session_state.page = 0  # reset to first page on sort change
+        st.session_state.page = 0
 
 if st.session_state.sort_increases:
     sorted_df = filtered_df[filtered_df["price_difference"] > 0].sort_values("price_difference", ascending=False)
@@ -277,7 +286,8 @@ page = st.session_state.page
 page20 = sorted_df.iloc[page * 20:(page + 1) * 20]
 
 for _, row in page20.iterrows():
-    label = f"{row['bnf_name']} — {gbp2f(row['price_difference'])}"
+    colour = "red" if row["price_difference"] > 0 else "green"
+    label = f":{colour}[{row['bnf_name']} — {gbp2f(row['price_difference'])}]"
     vmpp_details = vmpp_df[vmpp_df["bnf_code"] == row["bnf_code"]].copy()
     with st.expander(label):
         display_df = vmpp_details[["nm", "price_pence", "previous_price_pence", "tariff_category"]].copy()
