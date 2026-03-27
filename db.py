@@ -164,10 +164,11 @@ def get_duckdb_connection():
     return duckdb.connect(LOCAL_DB)
 
 
+
 @st.cache_resource
 def get_latest_dates():
     conn = get_duckdb_connection()
     return {
-        "prescribing": _cached_month_for_table(conn, "prescribing", "month"),
+        "prescribing": _latest_bq_month("measures.global_data_lpzomnibus", "month"),
         "tariff":      _cached_month_for_table(conn, "tariff_price_changes", "date"),
     }
