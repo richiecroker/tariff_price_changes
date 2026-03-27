@@ -299,6 +299,20 @@ def compute_master_with_details(icb_df: pd.DataFrame, vmpp_df: pd.DataFrame):
 
 master_df = compute_master_with_details(filtered_icb, vmpp_df)
 
+# =============================
+# Top 10 Reductions and Increases
+# =============================
+# Get only the master rows (not detail rows)
+master_only = master_df[master_df["is_detail"] == False].copy()
+
+# Top 10 reductions (most negative values)
+top_reductions = master_only.nsmallest(10, "price_difference_sum")[["bnf_name", "price_difference_sum"]].copy()
+top_reductions.columns = ["BNF Name", "Price Difference"]
+
+# Top 10 increases (most positive values)
+top_increases = master_only.nlargest(10, "price_difference_sum")[["bnf_name", "price_difference_sum"]].copy()
+top_increases.columns = ["BNF Name", "Price Difference"]
+
 
 # Price formatter for AgGrid
 
