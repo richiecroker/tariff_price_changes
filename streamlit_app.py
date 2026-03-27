@@ -255,6 +255,60 @@ with col2:
     top_reductions.columns = ["Presentation", "Cost Reduction"]
     st.dataframe(top_reductions, hide_index=True)
 
+
+if "sort_increases" not in st.session_state:
+    st.session_state.sort_increases = True
+if "page" not in st.session_state:
+    st.session_state.page = 0
+
+col_btn, _ = st.columns([1, 4])
+with col_btn:
+    if st.button("Show Increases" if not st.session_state.sort_increases else "Show Reductions"):
+        st.session_state.sort_increases = not st.session_state.sort_increases
+        st.session_state.page = 0  # reset to first page on sort change
+
+if st.session_state.sort_increases:
+    sorted_df = filtered_df[filtered_df["price_difference"] > 0].sort_values("price_difference", ascending=False)
+else:
+    sorted_df = filtered_df[filtered_df["price_difference"] < 0].sort_values("price_difference", ascending=True)
+
+total_pages = max(1, (len(sorted_df) - 1) // 20 + 1)
+page = st.session_state.page
+page20 = sorted_df.iloc[page * 20:(page + 1) * 20]
+
+for _, row in page20.iterrows():
+    label = f"{row['bnf_name']} — {gbp2f(row['price_difference'])}"
+    vmpp_details = vmpp_df[vmpp_df["bnf_code"] == row["bnf_code"]].copy()
+    with st.expander(label):
+        display_df = vmpp_details[["nm", "price_pence", "previous_price_pence", "tariff_cat"]].copy()
+        display_df["price_pence"] = (pd.to_numeric(display_df["price_pence"], errors="coerce") / 100).apply(gbp2f)
+        display_df["previous_price_pence"] = (pd.to_numeric(display_df["previous_price_pence"], errors="coerce") / 100).apply(gbp2f)
+        display_df.columns = ["Name", "Price", "Previous Price", "DT Category"]
+        st.dataframe(display_df, hide_index=True, use_container_width=True)
+
+col_prev, col_info, col_next = st.columns([1, 2, 1])
+with col_prev:
+    if st.button("← Previous", disabled=page == 0):
+        st.session_state.page -= 1
+        st.rerun()
+with col_info:
+    st.markdown(f"<div style='text-align:center'>Page {page + 1} of {total_pages}</div>", unsafe_allow_html=True)
+with col_next:
+    if st.button("Next →", disabled=page >= total_pages - 1):
+        st.session_state.page += 1
+        st.rerun()
+
+
+
+
+
+
+
+
+
+
+
+
 # =======.======================
 # Master aggregation with details
 # =============================
