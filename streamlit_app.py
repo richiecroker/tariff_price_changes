@@ -254,6 +254,8 @@ with col2:
     top_reductions["price_difference"] = top_reductions["price_difference"].apply(gbp2f)
     st.dataframe(top_reductions, hide_index=True)
 
+st.write(filtered_df["price_difference"].describe())
+
 # =======.======================
 # Master aggregation with details
 # =============================
