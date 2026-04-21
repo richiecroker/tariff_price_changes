@@ -63,10 +63,11 @@ def _latest_bq_dates() -> dict:
 def _cached_month_for_table(conn, table_name: str, date_col: str) -> str | None:
     try:
         result = conn.execute(
-            f"SELECT MAX(CAST({date_col} AS DATE)) FROM {table_name}"
+            f"SELECT CAST(MAX({date_col}) AS DATE) FROM {table_name}"
         ).fetchone()
         return str(result[0]) if result[0] else None
-    except Exception:
+    except Exception as e:
+        logger.warning(f"Failed to get max {date_col} from {table_name}: {e}")
         return None
 
 def _is_db_current(conn, latest: dict) -> bool:
