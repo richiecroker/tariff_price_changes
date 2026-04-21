@@ -1,5 +1,6 @@
 import shutil
 import os
+import logging
 
 import duckdb
 import pandas as pd
@@ -8,6 +9,7 @@ import streamlit as st
 from google.cloud import bigquery, storage
 from google.oauth2 import service_account
 
+logger = logging.getLogger(__name__)
 
 # --- Constants ---
 BUCKET_NAME     = "ebmdatalab"
@@ -23,6 +25,8 @@ TABLES_TO_BUILD = [
     ("practices",            "build_practices.sql"),
 ]
 
+CHUNK_SIZE = 50_000  # rows per insert chunk
+
 
 # --- Auth / client helpers ---
 
@@ -37,16 +41,6 @@ def _bq_client():
 
 
 # --- Helper functions ---
-
-def _latest_bq_month(table: str, date_col: str) -> str | None:
-    bq = _bq_client()
-    try:
-        result = bq.query(f"SELECT DATE(MAX({date_col})) FROM `{table}`").result()
-        row = list(result)[0]
-        return str(row[0]) if row[0] else None
-    except Exception as e:
-        st.error(f"Failed to get latest {date_col} from {table}: {e}")
-        return None
 
 def _latest_bq_dates() -> dict:
     """Fetch latest prescribing and tariff dates from BigQuery in a single query."""
@@ -91,17 +85,45 @@ def _normalise_df(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 def _rebuild_table(conn, table_name: str, sql_file: str):
+    """
+    Stream BigQuery results into DuckDB in chunks to avoid loading the
+    entire result set into RAM at once.
+    """
     with open(os.path.join(SQL_DIR, sql_file)) as f:
         sql = f.read()
+
     bq = _bq_client()
-    df = _normalise_df(bq.query(sql).result().to_dataframe())
+    job = bq.query(sql)
+    result = job.result()
+    total_rows = result.total_rows
+    logger.info(f"Building {table_name}: {total_rows:,} rows")
+
     conn.execute(f"DROP TABLE IF EXISTS {table_name}")
-    conn.register("_tmp", df)
-    conn.execute(f"CREATE TABLE {table_name} AS SELECT * FROM _tmp")
-    conn.unregister("_tmp")
+
+    first_chunk = True
+    rows_inserted = 0
+
+    for chunk in result.to_dataframe_iterable(max_results=CHUNK_SIZE):
+        chunk = _normalise_df(chunk)
+
+        if first_chunk:
+            conn.register("_chunk", chunk)
+            conn.execute(f"CREATE TABLE {table_name} AS SELECT * FROM _chunk")
+            conn.unregister("_chunk")
+            first_chunk = False
+        else:
+            conn.register("_chunk", chunk)
+            conn.execute(f"INSERT INTO {table_name} SELECT * FROM _chunk")
+            conn.unregister("_chunk")
+
+        rows_inserted += len(chunk)
+        logger.info(f"  {table_name}: {rows_inserted:,} / {total_rows:,} rows inserted")
+
+    logger.info(f"Finished building {table_name}: {rows_inserted:,} rows total")
 
 def _rebuild_all_tables(conn):
     for table_name, sql_file in TABLES_TO_BUILD:
+        logger.info(f"Starting rebuild of {table_name}")
         _rebuild_table(conn, table_name, sql_file)
 
 def _save_db_to_gcs(bucket):
@@ -131,6 +153,7 @@ def get_duckdb_connection():
         try:
             conn = duckdb.connect(LOCAL_DB)
             if _is_db_current(conn, latest):
+                logger.info("Local DuckDB is current, reusing.")
                 return conn
             conn.close()
         except Exception:
@@ -144,8 +167,10 @@ def get_duckdb_connection():
         os.replace(tmp_path, LOCAL_DB)
         conn = duckdb.connect(LOCAL_DB)
         if _is_db_current(conn, latest):
+            logger.info("GCS-cached DuckDB is current, reusing.")
             return conn
         conn.close()
+        logger.info("GCS-cached DuckDB is stale or missing tables, doing full rebuild.")
     except Exception:
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
@@ -164,11 +189,10 @@ def get_duckdb_connection():
     return duckdb.connect(LOCAL_DB)
 
 
-
 @st.cache_resource
 def get_latest_dates():
     conn = get_duckdb_connection()
     return {
-        "prescribing": _latest_bq_month("measures.global_data_lpzomnibus", "month"),
+        "prescribing": _cached_month_for_table(conn, "prescribing", "month"),
         "tariff":      _cached_month_for_table(conn, "tariff_price_changes", "date"),
     }
