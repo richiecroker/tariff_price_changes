@@ -25,8 +25,6 @@ TABLES_TO_BUILD = [
     ("practices",            "build_practices.sql"),
 ]
 
-CHUNK_SIZE = 50_000  # rows per insert chunk
-
 
 # --- Auth / client helpers ---
 
@@ -103,7 +101,7 @@ def _rebuild_table(conn, table_name: str, sql_file: str):
     first_chunk = True
     rows_inserted = 0
 
-    for chunk in result.to_dataframe_iterable(page_size=CHUNK_SIZE):
+    for chunk in result.to_dataframe_iterable():
         chunk = _normalise_df(chunk)
 
         if first_chunk:
