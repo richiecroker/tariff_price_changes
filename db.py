@@ -90,8 +90,8 @@ def _delete_gcs_parquet(bucket, gcs_parquet_path: str):
 
 def _rebuild_table(conn, table_name: str, sql_file: str, bucket):
     """
-    Export BQ query result directly to GCS as parquet (no Python RAM used),
-    then load into DuckDB directly from GCS via httpfs.
+    Export BQ query result to GCS as parquet (no Python RAM for the query),
+    download parquet shards to /tmp, load into DuckDB, then clean up.
     """
     with open(os.path.join(SQL_DIR, sql_file)) as f:
         sql = f.read()
@@ -99,6 +99,7 @@ def _rebuild_table(conn, table_name: str, sql_file: str, bucket):
     bq = _bq_client()
     gcs_parquet_path = f"{GCS_PARQUET_DIR}/{table_name}"
     gcs_uri = f"gs://{BUCKET_NAME}/{gcs_parquet_path}/*.parquet"
+    local_dir = f"/tmp/{table_name}_parquet"
 
     # Step 1: run query into a temporary BQ table
     logger.info(f"Running BQ query for {table_name}...")
@@ -109,26 +110,24 @@ def _rebuild_table(conn, table_name: str, sql_file: str, bucket):
         write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
         create_disposition=bigquery.CreateDisposition.CREATE_IF_NEEDED,
     )
-
     query_job = bq.query(sql, job_config=job_config)
     query_job.result()
     logger.info(f"BQ query complete for {table_name}")
 
-    # Step 2: export the temp BQ table to GCS as parquet
+    # Step 2: export temp BQ table to GCS as parquet
     logger.info(f"Exporting {table_name} to GCS: {gcs_uri}")
     _delete_gcs_parquet(bucket, gcs_parquet_path)  # clean up any previous shards
 
-    export_config = bigquery.ExtractJobConfig(
-        destination_format=bigquery.DestinationFormat.PARQUET,
-        compression=bigquery.Compression.SNAPPY,
-    )
     extract_job = bq.extract_table(
         tmp_table,
         gcs_uri,
-        job_config=export_config,
+        job_config=bigquery.ExtractJobConfig(
+            destination_format=bigquery.DestinationFormat.PARQUET,
+            compression=bigquery.Compression.SNAPPY,
+        ),
     )
     extract_job.result()
-    logger.info(f"Export complete for {table_name}")
+    logger.info(f"Export to GCS complete for {table_name}")
 
     # Step 3: delete the temp BQ table
     try:
@@ -137,31 +136,33 @@ def _rebuild_table(conn, table_name: str, sql_file: str, bucket):
     except Exception as e:
         logger.warning(f"Failed to delete temp BQ table {tmp_table} (non-fatal): {e}")
 
-    # Step 4: load from GCS parquet directly into DuckDB via httpfs
-    logger.info(f"Loading {table_name} into DuckDB from GCS parquet...")
-    sa = dict(st.secrets["gcp_service_account"])
-    private_key = sa["private_key"].replace("'", "''")  # escape any single quotes
+    # Step 4: download parquet shards from GCS to local /tmp
+    logger.info(f"Downloading parquet shards for {table_name}...")
+    if os.path.exists(local_dir):
+        shutil.rmtree(local_dir)
+    os.makedirs(local_dir)
 
-    conn.execute("INSTALL httpfs; LOAD httpfs;")
-    conn.execute(f"""
-        CREATE OR REPLACE SECRET gcs_secret (
-            TYPE GCS,
-            KEY_ID '{sa["client_email"]}',
-            SECRET '{private_key}',
-            PROJECT '{sa["project_id"]}'
-        )
-    """)
+    blobs = list(bucket.list_blobs(prefix=gcs_parquet_path))
+    for blob in blobs:
+        local_path = os.path.join(local_dir, os.path.basename(blob.name))
+        blob.download_to_filename(local_path)
+        logger.info(f"  Downloaded {blob.name}")
 
+    logger.info(f"Downloaded {len(blobs)} shard(s) for {table_name}")
+
+    # Step 5: load into DuckDB from local parquet
+    logger.info(f"Loading {table_name} into DuckDB...")
     conn.execute(f"DROP TABLE IF EXISTS {table_name}")
     conn.execute(f"""
         CREATE TABLE {table_name} AS
-        SELECT * FROM read_parquet('{gcs_uri}')
+        SELECT * FROM read_parquet('{local_dir}/*.parquet')
     """)
 
     row_count = conn.execute(f"SELECT COUNT(*) FROM {table_name}").fetchone()[0]
     logger.info(f"Loaded {row_count:,} rows into {table_name}")
 
-    # Step 5: clean up GCS parquet shards
+    # Step 6: clean up local parquet shards and GCS
+    shutil.rmtree(local_dir)
     _delete_gcs_parquet(bucket, gcs_parquet_path)
 
 def _rebuild_all_tables(conn, bucket):
@@ -202,7 +203,7 @@ def get_duckdb_connection():
         except Exception:
             pass
 
-    # --- Check 2: download the cached DB from GCS and see if that's up to date ---
+    # --- Check 2: download the cached DB from GCS and see if that's up to date? ---
     tmp_path = LOCAL_DB + ".tmp"
     try:
         with st.spinner("Downloading cached database..."):
