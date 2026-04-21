@@ -60,24 +60,37 @@ def _latest_bq_dates() -> dict:
         st.error(f"Failed to fetch latest dates from BigQuery: {e}")
         return {"prescribing": None, "tariff": None}
 
-def _cached_month_for_table(conn, table_name: str, date_col: str) -> str | None:
-    try:
-        result = conn.execute(
-            f"SELECT CAST(MAX({date_col}) AS DATE) FROM {table_name}"
-        ).fetchone()
-        return str(result[0]) if result[0] else None
-    except Exception as e:
-        logger.warning(f"Failed to get max {date_col} from {table_name}: {e}")
-        return None
+def _save_metadata(conn, latest: dict):
+    """Store the BQ dates in a small metadata table so we can check freshness next startup."""
+    conn.execute("DROP TABLE IF EXISTS _metadata")
+    conn.execute("CREATE TABLE _metadata (key VARCHAR, value VARCHAR)")
+    conn.execute("INSERT INTO _metadata VALUES ('prescribing', ?)", [latest["prescribing"]])
+    conn.execute("INSERT INTO _metadata VALUES ('tariff', ?)", [latest["tariff"]])
+    logger.info(f"Saved metadata: {latest}")
 
 def _is_db_current(conn, latest: dict) -> bool:
     """Return True if the local DuckDB has all required tables and is up to date."""
     tables = {r[0] for r in conn.execute("SHOW TABLES").fetchall()}
-    return (
-        REQUIRED_TABLES.issubset(tables)
-        and _cached_month_for_table(conn, "prescribing", "month") == latest["prescribing"]
-        and _cached_month_for_table(conn, "tariff_price_changes", "date") == latest["tariff"]
+    if not REQUIRED_TABLES.issubset(tables) or "_metadata" not in tables:
+        return False
+    rows = {r[0]: r[1] for r in conn.execute("SELECT key, value FROM _metadata").fetchall()}
+    current = (
+        rows.get("prescribing") == latest["prescribing"]
+        and rows.get("tariff") == latest["tariff"]
     )
+    logger.info(f"DB currency check — stored: {rows}, latest: {latest}, current: {current}")
+    return current
+
+def _cached_month_for_table(conn, table_name: str, date_col: str) -> str | None:
+    """Read a date value from the metadata table rather than scanning data tables."""
+    try:
+        result = conn.execute(
+            "SELECT value FROM _metadata WHERE key = ?", [date_col]
+        ).fetchone()
+        return result[0] if result else None
+    except Exception as e:
+        logger.warning(f"Failed to get {date_col} from metadata: {e}")
+        return None
 
 def _delete_gcs_parquet(bucket, gcs_parquet_path: str):
     """Delete all blobs under a GCS prefix (parquet shards)."""
@@ -166,10 +179,11 @@ def _rebuild_table(conn, table_name: str, sql_file: str, bucket):
     shutil.rmtree(local_dir)
     _delete_gcs_parquet(bucket, gcs_parquet_path)
 
-def _rebuild_all_tables(conn, bucket):
+def _rebuild_all_tables(conn, bucket, latest: dict):
     for table_name, sql_file in TABLES_TO_BUILD:
         logger.info(f"Starting rebuild of {table_name}")
         _rebuild_table(conn, table_name, sql_file, bucket)
+    _save_metadata(conn, latest)
 
 def _save_db_to_gcs(bucket):
     with st.spinner("Saving database to GCS for next time..."):
@@ -204,7 +218,7 @@ def get_duckdb_connection():
         except Exception:
             pass
 
-    # --- Check 2: download the cached DB from GCS and see if that's up to date? ---
+    # --- Check 2: download the cached DB from GCS and see if that's up to date ---
     tmp_path = LOCAL_DB + ".tmp"
     try:
         with st.spinner("Downloading cached database..."):
@@ -226,8 +240,8 @@ def get_duckdb_connection():
 
     with st.spinner("Rebuilding database from source data - this may take a few minutes..."):
         conn = duckdb.connect(LOCAL_DB)
-        _rebuild_all_tables(conn, bucket)
-        conn.checkpoint()
+        _rebuild_all_tables(conn, bucket, latest)
+        conn.execute("FORCE CHECKPOINT")
         conn.close()
 
     _save_db_to_gcs(bucket)
@@ -238,6 +252,6 @@ def get_duckdb_connection():
 def get_latest_dates():
     conn = get_duckdb_connection()
     return {
-        "prescribing": _cached_month_for_table(conn, "prescribing", "month"),
-        "tariff":      _cached_month_for_table(conn, "tariff_price_changes", "date"),
+        "prescribing": _cached_month_for_table(conn, "prescribing"),
+        "tariff":      _cached_month_for_table(conn, "tariff"),
     }
