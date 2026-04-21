@@ -103,7 +103,7 @@ def _rebuild_table(conn, table_name: str, sql_file: str):
     first_chunk = True
     rows_inserted = 0
 
-    for chunk in result.to_dataframe_iterable(max_results=CHUNK_SIZE):
+    for chunk in result.to_dataframe_iterable(page_size=CHUNK_SIZE):
         chunk = _normalise_df(chunk)
 
         if first_chunk:
